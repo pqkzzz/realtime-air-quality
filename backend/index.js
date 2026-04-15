@@ -1,7 +1,9 @@
-require('dotenv').config();
-const express = require('express');
+require("dotenv").config();
+const express = require("express");
 const app = express();
-const router = require('./routers/index');
+const router = require("./routers/index");
+const { startCronJobs } = require("./jobs/airQualityCron");
+startCronJobs();
 
 const PORT = process.env.PORT || 3000;
 
@@ -9,11 +11,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Main Router: tất cả các API sẽ có prefix là /api
-app.use('/api', router);
+app.use("/api", router);
 
 // Root endpoint: kiểm tra server hoạt động
-app.get('/', (req, res) => {
-  res.send('<h1>Air Quality API is running...</h1>');
+app.get("/", (req, res) => {
+  res.send("<h1>Air Quality API is running...</h1>");
 });
 
 // Lắng nghe kết nối trên port cấu hình
