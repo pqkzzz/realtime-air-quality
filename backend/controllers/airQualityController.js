@@ -3,9 +3,14 @@ const {
   POLLUTANTS,
   AQI_CATEGORIES,
   getAqiCategory,
-  generateMeasurement,
-  randomBetween,
 } = require("../configs/mockData");
+
+const {
+  getLatest: getLatestFromModel,
+  getTimeSeries: getTimeSeriesFromModel,
+  getGroupedByDistrict,
+  getGroupedByHour,
+} = require("../models/airQualityModel");
 
 // ─────────────────────────────────────────────
 // HELPER
@@ -33,67 +38,34 @@ function parseTimeRange(query) {
   return { from, to };
 }
 
-function chooseInterval(fromMs, toMs) {
-  const diffH = (toMs - fromMs) / 3600000;
-  if (diffH <= 2) return 5 * 60 * 1000; // 5 phút
-  if (diffH <= 12) return 30 * 60 * 1000; // 30 phút
-  if (diffH <= 48) return 60 * 60 * 1000; // 1 giờ
-  if (diffH <= 336) return 6 * 3600 * 1000; // 6 giờ
-  return 24 * 3600 * 1000; // 1 ngày
-}
-
 // ─────────────────────────────────────────────
 // 1. TIME-SERIES  –  GET /api/air-quality/timeseries
 // ─────────────────────────────────────────────
-// Query params:
-//   station_id  – mặc định lấy tất cả
-//   range       – 1h | 6h | 12h | 24h | 7d | 30d
-//   from / to   – ISO datetime (thay thế range)
-//   pollutant   – PM2.5 | PM10 | NO2 | SO2 | CO | O3 | aqi (mặc định: aqi)
-
-exports.getTimeSeries = (req, res) => {
+exports.getTimeSeries = async (req, res) => {
   try {
     const { from, to } = parseTimeRange(req.query);
-    const interval = chooseInterval(from, to);
     const pollutant = req.query.pollutant || "aqi";
-    const stationIds = req.query.station_id
-      ? req.query.station_id.split(",")
+    const stationIdsQuery = req.query.station_id
+      ? req.query.station_id.split(",").map((s) => s.trim())
       : STATIONS.map((s) => s.id);
 
-    // Chỉ lấy các station hợp lệ
-    const stations = STATIONS.filter((s) => stationIds.includes(s.id));
+    const stations = STATIONS.filter((s) => stationIdsQuery.includes(s.id));
     if (!stations.length) {
       return res
         .status(404)
         .json({ success: false, message: "Không tìm thấy trạm đo" });
     }
 
-    // Tạo danh sách timestamps
-    const timestamps = [];
-    for (let t = from; t <= to; t += interval) timestamps.push(t);
+    const dbData = await getTimeSeriesFromModel({
+      stationIds: stationIdsQuery,
+      from: new Date(from),
+      to: new Date(to),
+      field: pollutant,
+    });
 
-    // Mỗi station có base AQI khác nhau để dữ liệu thực tế hơn
-    const baseAqiMap = {
-      "HCM-001": 95,
-      "HCM-002": 88,
-      "HCM-003": 75,
-      "HCM-004": 110,
-      "HCM-005": 82,
-      "HCM-006": 65,
-    };
-
-    const series = stations.map((station) => {
-      const base = baseAqiMap[station.id] || 85;
-      const data = timestamps.map((ts) => {
-        const m = generateMeasurement(station.id, ts, base);
-        return {
-          timestamp: new Date(ts).toISOString(),
-          value:
-            pollutant === "aqi" ? m.aqi : (m.pollutants[pollutant] ?? null),
-        };
-      });
-
-      return {
+    const seriesMap = {};
+    stations.forEach((station) => {
+      seriesMap[station.id] = {
         station_id: station.id,
         station_name: station.name,
         district: station.district,
@@ -101,19 +73,34 @@ exports.getTimeSeries = (req, res) => {
         lon: station.lon,
         pollutant,
         unit:
-          pollutant === "aqi" ? "AQI" : pollutant === "CO" ? "mg/m³" : "µg/m³",
-        data,
+          pollutant === "aqi"
+            ? "AQI"
+            : pollutant === "co"
+              ? "mg/m³"
+              : "µg/m³",
+        data: [],
       };
     });
+
+    for (const row of dbData) {
+      const sMap = seriesMap[row.station_id];
+      if (sMap) {
+        sMap.data.push({
+          timestamp: new Date(row.measured_at).toISOString(),
+          value: row.value,
+        });
+      }
+    }
+
+    const series = Object.values(seriesMap);
 
     return res.json({
       success: true,
       meta: {
         from: new Date(from).toISOString(),
         to: new Date(to).toISOString(),
-        interval_ms: interval,
         pollutant,
-        total_points: timestamps.length,
+        total_points: dbData.length,
       },
       series,
     });
@@ -125,12 +112,7 @@ exports.getTimeSeries = (req, res) => {
 // ─────────────────────────────────────────────
 // 2. GROUPED DATA  –  GET /api/air-quality/grouped
 // ─────────────────────────────────────────────
-// Query params:
-//   group_by   – station | district | aqi_category | hour_of_day | pollutant
-//   range / from / to  (giống trên)
-//   pollutant  – chỉ dùng khi group_by != pollutant (mặc định: aqi)
-
-exports.getGrouped = (req, res) => {
+exports.getGrouped = async (req, res) => {
   try {
     const { from, to } = parseTimeRange(req.query);
     const groupBy = req.query.group_by || "district";
@@ -150,124 +132,116 @@ exports.getGrouped = (req, res) => {
       });
     }
 
-    const baseAqiMap = {
-      "HCM-001": 95,
-      "HCM-002": 88,
-      "HCM-003": 75,
-      "HCM-004": 110,
-      "HCM-005": 82,
-      "HCM-006": 65,
-    };
-
-    // Tạo bộ sample measurements (mỗi station x mỗi giờ trong khoảng thời gian)
-    const hourMs = 3600 * 1000;
-    const samples = [];
-    for (let t = from; t <= to; t += hourMs) {
-      for (const station of STATIONS) {
-        samples.push(
-          generateMeasurement(station.id, t, baseAqiMap[station.id] || 85),
-        );
-      }
-    }
-
     let groups = [];
 
-    // ── Group by STATION ──
-    if (groupBy === "station") {
-      groups = STATIONS.map((station) => {
-        const rows = samples.filter((s) => s.station_id === station.id);
-        const values = rows.map((r) =>
-          pollutant === "aqi" ? r.aqi : r.pollutants[pollutant],
-        );
-        return buildGroup(
-          station.id,
-          station.name,
-          station.district,
-          values,
-          pollutant,
-        );
+    if (groupBy === "district") {
+      const dbResult = await getGroupedByDistrict({
+        from: new Date(from),
+        to: new Date(to),
+        field: pollutant,
       });
-    }
-
-    // ── Group by DISTRICT ──
-    else if (groupBy === "district") {
-      const districtMap = {};
-      for (const station of STATIONS) {
-        if (!districtMap[station.district]) districtMap[station.district] = [];
-        const rows = samples.filter((s) => s.station_id === station.id);
-        districtMap[station.district].push(...rows);
-      }
-      groups = Object.entries(districtMap).map(([district, rows]) => {
-        const values = rows.map((r) =>
-          pollutant === "aqi" ? r.aqi : r.pollutants[pollutant],
-        );
-        const stations_in_group = STATIONS.filter(
-          (s) => s.district === district,
+      groups = dbResult.map((g) => {
+        const districtName = g.district;
+        const stationsInGroup = STATIONS.filter(
+          (s) => s.district === districtName
         ).map((s) => s.id);
         return {
-          ...buildGroup(district, district, null, values, pollutant),
-          stations: stations_in_group,
+          id: districtName,
+          label: districtName,
+          district: districtName,
+          pollutant,
+          avg: g.avg !== null ? parseFloat(Number(g.avg).toFixed(1)) : null,
+          min: g.min !== null ? parseFloat(Number(g.min).toFixed(1)) : null,
+          max: g.max !== null ? parseFloat(Number(g.max).toFixed(1)) : null,
+          count: parseInt(g.count) || 0,
+          stations: stationsInGroup,
         };
       });
-    }
-
-    // ── Group by AQI CATEGORY ──
-    else if (groupBy === "aqi_category") {
-      const catMap = {};
-      for (const row of samples) {
-        const cat = row.category;
-        if (!catMap[cat]) catMap[cat] = [];
-        catMap[cat].push(row);
-      }
-      groups = AQI_CATEGORIES.map((c) => {
-        const rows = catMap[c.label] || [];
-        const values = rows.map((r) => r.aqi);
-        return {
-          ...buildGroup(c.label, c.label, null, values, "aqi"),
-          color: c.color,
-          aqi_range: c.range,
-          description: c.description,
-          sample_count: rows.length,
-        };
-      }).filter((g) => g.sample_count > 0);
-    }
-
-    // ── Group by HOUR OF DAY ──
-    else if (groupBy === "hour_of_day") {
-      const hourMap = {};
-      for (const row of samples) {
-        const h = new Date(row.timestamp).getHours();
-        if (!hourMap[h]) hourMap[h] = [];
-        hourMap[h].push(row);
-      }
-      groups = Array.from({ length: 24 }, (_, h) => {
-        const rows = hourMap[h] || [];
-        const values = rows.map((r) =>
-          pollutant === "aqi" ? r.aqi : r.pollutants[pollutant],
-        );
-        return {
-          ...buildGroup(
-            `${String(h).padStart(2, "0")}:00`,
-            `Giờ ${h}h`,
-            null,
-            values,
+    } else if (groupBy === "hour_of_day") {
+      const dbResult = await getGroupedByHour({
+        from: new Date(from),
+        to: new Date(to),
+        field: pollutant,
+      });
+      groups = dbResult
+        .map((g) => {
+          const h = Number(g.hour);
+          const padHour = String(h).padStart(2, "0");
+          return {
+            id: `${padHour}:00`,
+            label: `Giờ ${h}h`,
             pollutant,
-          ),
-          hour: h,
-          is_peak: (h >= 7 && h <= 9) || (h >= 17 && h <= 19),
-        };
-      }).sort((a, b) => a.hour - b.hour);
-    }
+            avg: g.avg !== null ? parseFloat(Number(g.avg).toFixed(1)) : null,
+            min: g.min !== null ? parseFloat(Number(g.min).toFixed(1)) : null,
+            max: g.max !== null ? parseFloat(Number(g.max).toFixed(1)) : null,
+            count: parseInt(g.count) || 0,
+            hour: h,
+            is_peak: (h >= 7 && h <= 9) || (h >= 17 && h <= 19),
+          };
+        })
+        .sort((a, b) => a.hour - b.hour);
+    } else {
+      // station | aqi_category | pollutant → load real data and group in memory
+      let queryField = pollutant;
+      if (groupBy === "aqi_category") queryField = "aqi";
 
-    // ── Group by POLLUTANT ──
-    else if (groupBy === "pollutant") {
-      groups = POLLUTANTS.map((p) => {
-        const values = samples.map((r) => r.pollutants[p]);
-        return {
-          ...buildGroup(p, p, null, values, p),
-          unit: p === "CO" ? "mg/m³" : "µg/m³",
-        };
+      const dbData = await getTimeSeriesFromModel({
+        stationIds: STATIONS.map((s) => s.id),
+        from: new Date(from),
+        to: new Date(to),
+        field: queryField,
       });
+
+      if (groupBy === "station") {
+        const stationMap = {};
+        dbData.forEach((row) => {
+          if (!stationMap[row.station_id]) stationMap[row.station_id] = [];
+          stationMap[row.station_id].push(row.value);
+        });
+        groups = STATIONS.map((station) => {
+          const values = stationMap[station.id] || [];
+          return buildGroup(
+            station.id,
+            station.name,
+            station.district,
+            values,
+            pollutant
+          );
+        });
+      } else if (groupBy === "aqi_category") {
+        const catMap = {};
+        dbData.forEach((row) => {
+          if (row.value == null) return;
+          const cat = getAqiCategory(Math.round(row.value)).label;
+          if (!catMap[cat]) catMap[cat] = [];
+          catMap[cat].push(row.value);
+        });
+        groups = AQI_CATEGORIES.map((c) => {
+          const values = catMap[c.label] || [];
+          return {
+            ...buildGroup(c.label, c.label, null, values, "aqi"),
+            color: c.color,
+            aqi_range: c.range,
+            description: c.description,
+            sample_count: values.length,
+          };
+        }).filter((g) => g.sample_count > 0);
+      } else if (groupBy === "pollutant") {
+        groups = [];
+        for (const p of POLLUTANTS) {
+          const tsData = await getTimeSeriesFromModel({
+            stationIds: STATIONS.map((s) => s.id),
+            from: new Date(from),
+            to: new Date(to),
+            field: p,
+          });
+          const values = tsData.map((r) => r.value);
+          groups.push({
+            ...buildGroup(p, p, null, values, p),
+            unit: p === "co" ? "mg/m³" : "µg/m³",
+          });
+        }
+      }
     }
 
     return res.json({
@@ -289,63 +263,61 @@ exports.getGrouped = (req, res) => {
 // ─────────────────────────────────────────────
 // 3. LATEST SNAPSHOT  –  GET /api/air-quality/latest
 // ─────────────────────────────────────────────
-exports.getLatest = (req, res) => {
-  const now = Date.now();
-  const baseAqiMap = {
-    "HCM-001": 95,
-    "HCM-002": 88,
-    "HCM-003": 75,
-    "HCM-004": 110,
-    "HCM-005": 82,
-    "HCM-006": 65,
-  };
+exports.getLatest = async (req, res) => {
+  try {
+    const latestReadings = await getLatestFromModel();
 
-  const stations = STATIONS.map((station) => {
-    const m = generateMeasurement(
-      station.id,
-      now,
-      baseAqiMap[station.id] || 85,
-    );
-    const category = getAqiCategory(m.aqi);
-    return {
-      station_id: station.id,
-      station_name: station.name,
-      district: station.district,
-      lat: station.lat,
-      lon: station.lon,
-      timestamp: new Date(now).toISOString(),
-      aqi: m.aqi,
-      category: category.label,
-      color: category.color,
-      description: category.description,
-      pollutants: m.pollutants,
-      weather: {
-        temperature: m.temperature,
-        humidity: m.humidity,
-        wind_speed: m.wind_speed,
+    const stations = latestReadings.map((reading) => {
+      const category = getAqiCategory(reading.aqi || 0);
+      return {
+        station_id: reading.station_id,
+        station_name: reading.station_name,
+        district: reading.district,
+        lat: reading.lat,
+        lon: reading.lon,
+        timestamp: new Date(reading.measured_at).toISOString(),
+        aqi: reading.aqi,
+        category: category.label,
+        color: category.color,
+        description: category.description,
+        pollutants: {
+          pm2_5: reading.pm2_5,
+          pm10: reading.pm10,
+          no2: reading.no2,
+          so2: reading.so2,
+          co: reading.co,
+          o3: reading.o3,
+          dust: reading.dust,
+          uv_index: reading.uv_index,
+        },
+      };
+    });
+
+    const aqiValues = stations
+      .map((s) => s.aqi)
+      .filter((a) => a != null);
+    const cityAqi = aqiValues.length
+      ? Math.round(aqiValues.reduce((a, b) => a + b, 0) / aqiValues.length)
+      : null;
+    const cityCategory = cityAqi != null ? getAqiCategory(cityAqi) : { label: "Unknown", color: "", description: "" };
+
+    return res.json({
+      success: true,
+      meta: {
+        timestamp: new Date().toISOString(),
+        total_stations: stations.length,
       },
-    };
-  });
-
-  const aqiValues = stations.map((s) => s.aqi);
-  const cityAqi = Math.round(
-    aqiValues.reduce((a, b) => a + b, 0) / aqiValues.length,
-  );
-
-  return res.json({
-    success: true,
-    meta: {
-      timestamp: new Date(now).toISOString(),
-      total_stations: stations.length,
-    },
-    city_summary: {
-      aqi: cityAqi,
-      category: getAqiCategory(cityAqi).label,
-      color: getAqiCategory(cityAqi).color,
-      description: getAqiCategory(cityAqi).description,
-    },
-    stations,
-  });
+      city_summary: {
+        aqi: cityAqi,
+        category: cityCategory.label,
+        color: cityCategory.color,
+        description: cityCategory.description,
+      },
+      stations,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // ─────────────────────────────────────────────
@@ -372,7 +344,7 @@ function buildGroup(id, label, district, values, pollutant) {
     };
   }
   const avg = parseFloat(
-    (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1),
+    (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
   );
   const min = parseFloat(Math.min(...values).toFixed(1));
   const max = parseFloat(Math.max(...values).toFixed(1));
