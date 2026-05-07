@@ -103,7 +103,25 @@ def run_overview_page():
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
 
     with col_f1:
-        city = st.selectbox("Chọn tỉnh/thành:", ["Toàn quốc"] + sorted(df["Thành phố"].unique()), key="tab1_city")
+               
+        options_list = ["Toàn quốc"] + sorted(df["Thành phố"].unique().tolist())
+
+        
+        selected_cities = st.multiselect(
+            "Chọn các tỉnh/thành phố muốn xem:", 
+            options=options_list,
+            default=["Toàn quốc"], 
+            key="tab1_multiselect"
+        )
+
+        if "Toàn quốc" in selected_cities:
+         
+            df_filtered = df.copy()
+        elif len(selected_cities) == 0:
+            st.warning("Vui lòng chọn ít nhất một tỉnh hoặc 'Toàn quốc' để hiển thị dữ liệu.")
+            st.stop() 
+        else:
+            df_filtered = df[df["Thành phố"].isin(selected_cities)].copy()
 
     with col_f2:
         
@@ -126,9 +144,6 @@ def run_overview_page():
     
     df_filtered = df.copy()
     
-    # Lọc theo Không gian
-    if city != "Toàn quốc":
-        df_filtered = df_filtered[df_filtered["Thành phố"] == city]
         
     # Lọc theo Thời gian (Timeline)
     start_date, end_date = date_range
