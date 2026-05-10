@@ -1,60 +1,94 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3000'; // Backend URL
+import { 
+  getLatestAirQuality, 
+  getTimeSeries, 
+  getGroupedData 
+} from '../services/api';
 
 /**
- * Custom Hook để lấy dữ liệu chất lượng không khí từ Backend
- * @returns {Object} { data, loading, error }
+ * Hook để lấy dữ liệu chất lượng không khí mới nhất của toàn thành phố
  */
-export function useAirQuality() {
-  const [data, setData] = useState([]); // Dữ liệu từ API
-  const [loading, setLoading] = useState(true); // Đang tải?
-  const [error, setError] = useState(null); // Lỗi gì?
+export function useLatestAirQuality() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Hàm gọi API
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/api/example`);
-        setData(response.data.data);
+        const response = await getLatestAirQuality();
+        setData(response.data); // Chứa { city_summary, stations, meta }
         setError(null);
       } catch (err) {
-        setError(err.message);
-        setData([]);
+        setError(err.message || 'Không thể lấy dữ liệu mới nhất');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []); // Chỉ chạy 1 lần khi component mount
+  }, []);
 
   return { data, loading, error };
 }
 
 /**
- * Custom Hook để thêm dữ liệu chất lượng không khí mới
- * @returns {Function} createData - hàm để tạo dữ liệu mới
+ * Hook để lấy dữ liệu biểu đồ đường (Time-series)
+ * @param {Object} params - { station_id, pollutant, range }
  */
-export function useCreateAirQuality() {
-  const [loading, setLoading] = useState(false);
+export function useAirQualityTimeSeries(params = { pollutant: 'aqi', range: '24h' }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const createData = async (newData) => {
-    try {
-      setLoading(true);
-      const response = await axios.post(`${API_URL}/api/example`, newData);
-      setError(null);
-      return response.data.data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await getTimeSeries(params);
+        setData(response.data.series || []);
+        setError(null);
+      } catch (err) {
+        setError(err.message || 'Không thể lấy dữ liệu lịch sử');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return { createData, loading, error };
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.station_id, params.pollutant, params.range]);
+
+  return { data, loading, error };
+}
+
+/**
+ * Hook để lấy dữ liệu biểu đồ cột (Grouped)
+ * @param {Object} params - { group_by, pollutant, range }
+ */
+export function useAirQualityGrouped(params = { group_by: 'district', pollutant: 'aqi', range: '24h' }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await getGroupedData(params);
+        setData(response.data.groups || []);
+        setError(null);
+      } catch (err) {
+        setError(err.message || 'Không thể lấy dữ liệu phân nhóm');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.group_by, params.pollutant, params.range]);
+
+  return { data, loading, error };
 }
