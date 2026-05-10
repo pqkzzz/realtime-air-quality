@@ -1,12 +1,11 @@
-import Home from "./pages/Home";
-import Header from "./components/Header";
+import React from 'react';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
-    <>
-      <Header />
-      <Home />
-    </>
+    <div className="App">
+      <Dashboard />
+    </div>
   );
 }
 
