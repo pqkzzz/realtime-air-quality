@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ProvinceSelector from "./ProvinceSelector";
+import CalendarHeatmap from "../components/CalendarHeatmap";
 
 const MIN_DATE = "2026-04-01";
 const MAX_DATE = "2026-04-30";
@@ -1028,7 +1029,11 @@ const Dashboard = () => {
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>Ma trận Lịch nhiệt</h3>
-                  <div style={styles.chartPlaceholder}></div>
+                  <CalendarHeatmap 
+                    data={data} 
+                    province={selectedTrendProvince} 
+                    isCompact={true} 
+                  />
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>Biểu đồ Phân phối Tần suất</h3>
