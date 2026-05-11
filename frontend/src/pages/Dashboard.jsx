@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ProvinceSelector from "./ProvinceSelector";
+import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
+import RadarChart from "../components/RadarChart";
 import CalendarHeatmap from "../components/CalendarHeatmap";
 
 const MIN_DATE = "2026-04-01";
@@ -1013,9 +1015,12 @@ const Dashboard = () => {
             <div style={styles.chartGrid}>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>Biểu đồ Đường Chuỗi thời gian</h3>
-                <div
-                  style={{ ...styles.chartPlaceholder, minHeight: "350px" }}
-                ></div>
+                <TimeSeriesLineChart 
+                  rows={trendRows} 
+                  granularity={selectedTrendGranularity} 
+                  threshold={100} 
+                />
+
               </div>
               <div
                 style={{
@@ -1184,9 +1189,14 @@ const Dashboard = () => {
               </div>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>Radar chart</h3>
-                <div
-                  style={{ ...styles.chartPlaceholder, minHeight: "450px" }}
-                ></div>
+                <RadarChart 
+                  rows={correlationRows}
+                  selectedY={selectedCorrelationY}
+                  yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label ?? selectedCorrelationY}
+                  yThreshold={selectedCorrelationY === "us_aqi" ? 100 : (CORRELATION_X_METRICS[selectedCorrelationY]?.threshold ?? 100)}
+                  allXMetrics={CORRELATION_X_METRICS}
+                  areaLabel={selectedCorrelationProvince || "Toàn quốc"}
+                />
               </div>
             </div>
           </>
