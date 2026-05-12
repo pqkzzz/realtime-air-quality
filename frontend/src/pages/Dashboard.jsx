@@ -3,6 +3,8 @@ import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
 import CalendarHeatmap from "../components/CalendarHeatmap";
+import AQIDonutChart from "../components/AQIDonutChart";
+import AQIBoxPlot from "../components/AQIBoxPlot";
 
 const MIN_DATE = "2026-04-01";
 const MAX_DATE = "2026-04-30";
@@ -216,6 +218,7 @@ const Dashboard = () => {
     useState("2026-04-01");
   const [selectedOverviewEndDate, setSelectedOverviewEndDate] =
     useState("2026-04-15");
+  const [selectedOverviewHour, setSelectedOverviewHour] = useState("12");
 
   const [selectedTrendProvince, setSelectedTrendProvince] = useState("");
   const [selectedTrendGranularity, setSelectedTrendGranularity] =
@@ -443,23 +446,31 @@ const Dashboard = () => {
     );
     return unique.sort();
   }, [data]);
+  const isOverviewSingleDay = selectedOverviewStartDate === selectedOverviewEndDate;
+  const overviewHourLabel = `${String(selectedOverviewHour).padStart(2, "0")}:00`;
 
   const overviewRows = useMemo(() => {
     if (!data.length) return [];
     const selectedSet = new Set(selectedOverviewProvinces);
     const useAllProvinces = selectedSet.size === 0;
+    const selectedHour = Number(selectedOverviewHour);
 
-    return data.filter(
-      (row) =>
+    return data.filter((row) => {
+      const provinceMatch = useAllProvinces || selectedSet.has(row.province);
+      const dateMatch =
         row.dateKey >= selectedOverviewStartDate &&
-        row.dateKey <= selectedOverviewEndDate &&
-        (useAllProvinces || selectedSet.has(row.province)),
-    );
+        row.dateKey <= selectedOverviewEndDate;
+      const hourMatch = !isOverviewSingleDay || row.hour === selectedHour;
+
+      return provinceMatch && dateMatch && hourMatch;
+    });
   }, [
     data,
     selectedOverviewProvinces,
     selectedOverviewStartDate,
     selectedOverviewEndDate,
+    selectedOverviewHour,
+    isOverviewSingleDay,
   ]);
 
   const overviewMetricThreshold = getMetricThreshold(selectedOverviewMetric);
@@ -833,6 +844,32 @@ const Dashboard = () => {
                     style={{ ...styles.select, minWidth: "200px" }}
                   />
                 </div>
+                {isOverviewSingleDay && (
+                <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "10px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <span style={styles.label}>Chọn giờ</span>
+                    <select
+                      className="hover-input"
+                      value={selectedOverviewHour}
+                      onChange={(event) => setSelectedOverviewHour(event.target.value)}
+                      style={{ ...styles.select, minWidth: "180px" }}
+                    >
+                      {Array.from({ length: 24 }, (_, hour) => {
+                        const value = String(hour);
+                        return (
+                          <option key={value} value={value}>
+                            {String(hour).padStart(2, "0")}:00
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div style={{ fontSize: "13px", color: theme.textSub, fontWeight: 600, marginTop: "24px" }}>
+                    Hiển thị theo từng giờ
+                  </div>
+                </div>
+              )}
               </div>
             </div>
 
@@ -888,8 +925,15 @@ const Dashboard = () => {
                 ></div>
               </div>
               <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>Donut chart</h3>
-                <div style={styles.chartPlaceholder}></div>
+                <h3 style={styles.chartTitle}>
+                  Biểu đồ Vành khăn Phân bố Trạng thái
+                </h3>
+
+                <AQIDonutChart
+                  rows={overviewRows}
+                  metric={selectedOverviewMetric}
+                  hourLabel={isOverviewSingleDay ? overviewHourLabel : ""}
+                />
               </div>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>
@@ -1029,8 +1073,14 @@ const Dashboard = () => {
                 }}
               >
                 <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Biểu đồ hộp râu ngoại lai</h3>
-                  <div style={styles.chartPlaceholder}></div>
+                  <h3 style={styles.chartTitle}>
+                    Biểu đồ Hộp và Râu Nhận diện Ngoại lai
+                  </h3>
+
+                  <AQIBoxPlot
+                    rows={trendRows}
+                    granularity={selectedTrendGranularity}
+                  />
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>Ma trận Lịch nhiệt</h3>
