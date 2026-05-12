@@ -3,6 +3,8 @@ import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
 import CalendarHeatmap from "../components/CalendarHeatmap";
+import HorizontalBarChart from "../components/hbar";
+import ScatterPlot from "../components/scatter";
 
 const MIN_DATE = "2026-04-01";
 const MAX_DATE = "2026-04-30";
@@ -486,8 +488,8 @@ const Dashboard = () => {
     ).size;
     const exceedPct = values.length
       ? (values.filter((value) => value >= overviewMetricThreshold).length /
-          values.length) *
-        100
+        values.length) *
+      100
       : 0;
 
     return {
@@ -505,9 +507,9 @@ const Dashboard = () => {
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-            getMonday(selectedTrendDate),
-            addDays(getMonday(selectedTrendDate), 6),
-          ]
+          getMonday(selectedTrendDate),
+          addDays(getMonday(selectedTrendDate), 6),
+        ]
         : [currentDate, currentDate];
 
     const startKey = formatDateKey(startDate);
@@ -617,10 +619,10 @@ const Dashboard = () => {
     const hazardRate =
       Number.isFinite(threshold) && threshold !== Infinity
         ? (xValues.filter(
-            (value) => Number.isFinite(value) && value >= threshold,
-          ).length /
-            xValues.filter(Number.isFinite).length) *
-          100
+          (value) => Number.isFinite(value) && value >= threshold,
+        ).length /
+          xValues.filter(Number.isFinite).length) *
+        100
         : 0;
 
     return {
@@ -893,9 +895,13 @@ const Dashboard = () => {
               </div>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>
-                  Biểu đồ thanh ngang xếp hạng Tỉnh/Thành
+                  Top 5 Tỉnh/Thành có chỉ số cao nhất
                 </h3>
-                <div style={styles.chartPlaceholder}></div>
+                <HorizontalBarChart
+                  rows={overviewRows}
+                  metricKey={selectedOverviewMetric}
+                  metricLabel={currentOverviewMetricLabel}
+                />
               </div>
             </div>
           </>
@@ -1015,10 +1021,10 @@ const Dashboard = () => {
             <div style={styles.chartGrid}>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>Biểu đồ Đường Chuỗi thời gian</h3>
-                <TimeSeriesLineChart 
-                  rows={trendRows} 
-                  granularity={selectedTrendGranularity} 
-                  threshold={100} 
+                <TimeSeriesLineChart
+                  rows={trendRows}
+                  granularity={selectedTrendGranularity}
+                  threshold={100}
                 />
 
               </div>
@@ -1034,10 +1040,10 @@ const Dashboard = () => {
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>Ma trận Lịch nhiệt</h3>
-                  <CalendarHeatmap 
-                    data={data} 
-                    province={selectedTrendProvince} 
-                    isCompact={true} 
+                  <CalendarHeatmap
+                    data={data}
+                    province={selectedTrendProvince}
+                    isCompact={true}
                   />
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
@@ -1183,13 +1189,17 @@ const Dashboard = () => {
                 <h3 style={styles.chartTitle}>
                   Biểu đồ Phân tán & Đường Hồi quy
                 </h3>
-                <div
-                  style={{ ...styles.chartPlaceholder, minHeight: "450px" }}
-                ></div>
+                <ScatterPlot
+                  rows={correlationRows}
+                  xKey={selectedCorrelationX}
+                  xLabel={CORRELATION_X_METRICS[selectedCorrelationX]?.label ?? selectedCorrelationX}
+                  yKey={selectedCorrelationY}
+                  yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label ?? selectedCorrelationY}
+                />
               </div>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>Radar chart</h3>
-                <RadarChart 
+                <RadarChart
                   rows={correlationRows}
                   selectedY={selectedCorrelationY}
                   yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label ?? selectedCorrelationY}
