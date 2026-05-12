@@ -201,10 +201,9 @@ function DonutChartAQI({
       <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A" }}>
-            Phân bố trạng thái theo {metric.label}
+            Theo WHO
           </div>
           <div style={{ fontSize: "13px", color: "#64748B", marginTop: "4px", lineHeight: 1.5 }}>
-            Khu vực: {provinceLabel} · Thời gian: {dateRangeLabel || "--"}
           </div>
         </div>
 

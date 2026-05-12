@@ -926,7 +926,7 @@ const Dashboard = () => {
               </div>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>
-                  Biểu đồ Vành khăn Phân bố Trạng thái
+                  BIỂU ĐỒ VÀNH KHĂN PHÂN BỐ TRẠNG THÁI
                 </h3>
 
                 <AQIDonutChart
@@ -1074,7 +1074,7 @@ const Dashboard = () => {
               >
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>
-                    Biểu đồ Hộp và Râu Nhận diện Ngoại lai
+                    Biểu đồ BOXPLOT: Nhận diện Ngoại lai
                   </h3>
 
                   <AQIBoxPlot

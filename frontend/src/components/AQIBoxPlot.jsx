@@ -232,7 +232,7 @@ function BoxPlotAnomalies({
             Nhận diện ngoại lai theo IQR
           </div>
           <div style={{ fontSize: "13px", color: "#64748B", marginTop: "4px", lineHeight: 1.5 }}>
-            Khu vực: {provinceLabel} · Thời gian: {dateRangeLabel || `${formatDate(chartBundle.startDate)} - ${formatDate(chartBundle.endDate)}`}
+          
           </div>
         </div>
 
@@ -262,24 +262,7 @@ function BoxPlotAnomalies({
         <Chart options={options} series={chartBundle.series} type="boxPlot" height={260} />
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "999px", padding: "7px 10px", fontSize: "12px", fontWeight: 700, color: "#0F172A" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "999px", background: "#EF4444" }} />
-          Điểm đỏ
-        </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "999px", padding: "7px 10px", fontSize: "12px", fontWeight: 700, color: "#0F172A" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "4px", background: "#94A3B8" }} />
-          Hộp tứ phân vị
-        </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "999px", padding: "7px 10px", fontSize: "12px", fontWeight: 700, color: "#0F172A" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "999px", background: "#111827" }} />
-          Trung vị
-        </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "999px", padding: "7px 10px", fontSize: "12px", fontWeight: 700, color: "#0F172A" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "999px", background: "#64748B" }} />
-          Râu
-        </div>
-      </div>
+      
     </div>
   );
 }
