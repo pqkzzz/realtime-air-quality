@@ -11,7 +11,6 @@ import {
 import "leaflet/dist/leaflet.css";
 
 // ── Bảng màu chuẩn VN_AQI (6 Cấp độ) ──────────────────────────
-// Mỗi cấp có fill (ruột sáng hơn), glow (viền và bóng mờ đậm hơn)
 const AQI_LEVELS = [
   { label: "Tốt", fill: "#34D399", glow: "#059669" }, // Xanh lá
   { label: "Trung bình", fill: "#FCD34D", glow: "#D97706" }, // Vàng
@@ -58,24 +57,25 @@ const Legend = () => (
       bottom: 24,
       left: 16,
       zIndex: 1000,
-      background: "rgba(10, 14, 26, 0.85)",
+      background: "rgba(255, 255, 255, 0.9)", // Đổi sang nền trắng kính mờ
       backdropFilter: "blur(8px)",
-      border: "1px solid rgba(255,255,255,0.1)",
+      border: "1px solid rgba(0,0,0,0.08)", // Viền xám nhạt
       borderRadius: 10,
       padding: "12px 16px",
       display: "flex",
       flexDirection: "column",
       gap: 6,
       pointerEvents: "none",
+      boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
     }}
   >
     <span
       style={{
         fontSize: 10,
         fontFamily: "'Inter', sans-serif",
-        color: "rgba(255,255,255,0.4)",
+        color: "#64748B", // Chữ xám
         textTransform: "uppercase",
-        fontWeight: 600,
+        fontWeight: 700,
         marginBottom: 2,
       }}
     >
@@ -89,15 +89,15 @@ const Legend = () => (
             height: 10,
             borderRadius: "50%",
             background: lvl.fill,
-            boxShadow: `0 0 6px ${lvl.fill}`,
+            boxShadow: `0 0 4px ${lvl.glow}88`,
           }}
         />
         <span
           style={{
             fontSize: 11,
-            color: "rgba(255,255,255,0.7)",
+            color: "#1E293B", // Chữ tối màu
             fontFamily: "'Inter', sans-serif",
-            fontWeight: 500,
+            fontWeight: 600,
           }}
         >
           {lvl.label}
@@ -140,17 +140,19 @@ const BubbleMap = ({
     <div
       style={{
         position: "relative",
-        flex: 1,
-        minHeight: 680,
-        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         width: "100%",
+        height: "100%",
+        minHeight: "600px",
         borderRadius: 14,
         overflow: "hidden",
-        background: "#0a0e1a",
+        background: "#F8FAFC", // Nền bao ngoài màu sáng
+        border: "1px solid #E2E8F0",
       }}
     >
       <style>{`
-        .leaflet-container { background: #0a0e1a !important; }
+        .leaflet-container { background: #F8FAFC !important; height: 100% !important; width: 100% !important; }
         .aqi-tooltip .leaflet-tooltip {
           background: transparent !important;
           border: none !important;
@@ -160,124 +162,124 @@ const BubbleMap = ({
         .aqi-tooltip .leaflet-tooltip::before { display: none !important; }
       `}</style>
 
-      <MapContainer
-        center={[16.047079, 108.20623]}
-        zoom={5.5}
-        style={{ height: "680px", width: "100%" }}
-        scrollWheelZoom={true}
-        zoomControl={false}
-      >
-        <ZoomTracker onZoomChange={handleZoomChange} />
+      <div style={{ flex: 1, position: "relative" }}>
+        <MapContainer
+          center={[16.047079, 108.20623]}
+          zoom={5.5}
+          scrollWheelZoom={true}
+          zoomControl={false}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        >
+          <ZoomTracker onZoomChange={handleZoomChange} />
 
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://carto.com/" style="color:rgba(255,255,255,0.3)">CartoDB</a>'
-        />
+          {/* Đổi TileLayer sang bản sáng (light_all) */}
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://carto.com/" style="color:#94A3B8">CartoDB</a>'
+          />
 
-        {aggregatedData.map((row, idx) => {
-          const val = row.displayVal;
-          const ratio = val / overviewMetricThreshold;
+          {aggregatedData.map((row, idx) => {
+            const val = row.displayVal;
+            const ratio = val / overviewMetricThreshold;
 
-          // --- SỬ DỤNG MÀU CHUẨN TỪ AQI_LEVELS ---
-          const levelIndex = getLevel(ratio);
-          const { fill, glow, label } = AQI_LEVELS[levelIndex];
+            const levelIndex = getLevel(ratio);
+            const { fill, glow, label } = AQI_LEVELS[levelIndex];
 
-          const base = val / (selectedOverviewMetric === "us_aqi" ? 10 : 4);
-          const factor = Math.pow(currentZoom / 5.5, 1.5);
-          const radius = Math.max(3, Math.min(25, base * factor));
+            const base = val / (selectedOverviewMetric === "us_aqi" ? 10 : 4);
+            const factor = Math.pow(currentZoom / 5.5, 1.5);
+            const radius = Math.max(3, Math.min(25, base * factor));
 
-          return (
-            <CircleMarker
-              key={idx}
-              center={[row.latitude, row.longitude]}
-              radius={radius}
-              pathOptions={{
-                fillColor: fill,
-                color: glow,
-                weight: 1,
-                opacity: 0.9,
-                fillOpacity: 0.7,
-              }}
-              className="aqi-tooltip"
-            >
-              <LeafletTooltip
-                direction="top"
-                offset={[0, -radius - 4]}
-                opacity={1}
+            return (
+              <CircleMarker
+                key={idx}
+                center={[row.latitude, row.longitude]}
+                radius={radius}
+                pathOptions={{
+                  fillColor: fill,
+                  color: glow, // Viền
+                  weight: 1.5, // Viền dày hơn xíu để rõ trên nền sáng
+                  opacity: 0.9,
+                  fillOpacity: 0.75, // Ruột đậm hơn xíu
+                }}
+                className="aqi-tooltip"
               >
-                <div
-                  style={{
-                    background: "rgba(8, 11, 22, 0.95)",
-                    backdropFilter: "blur(12px)",
-                    border: `1px solid ${glow}BB`, // Viền tooltip nổi bật theo màu cấp độ
-                    borderRadius: 12,
-                    padding: "12px",
-                    minWidth: 140,
-                    textAlign: "center",
-                    boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 15px ${fill}33`,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
+                <LeafletTooltip
+                  direction="top"
+                  offset={[0, -radius - 4]}
+                  opacity={1}
                 >
                   <div
                     style={{
-                      fontSize: 11,
-                      color: "rgba(255,255,255,0.5)",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {row.province}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 32,
-                      fontWeight: 800,
-                      color: fill, // Con số lớn nổi bật
-                      lineHeight: 1,
+                      background: "rgba(255, 255, 255, 0.95)", // Tooltip nền trắng
+                      backdropFilter: "blur(12px)",
+                      border: `1px solid ${glow}66`,
+                      borderRadius: 12,
+                      padding: "12px",
+                      minWidth: 140,
+                      textAlign: "center",
+                      boxShadow: `0 8px 24px rgba(0,0,0,0.12), 0 0 10px ${fill}22`,
                       fontFamily: "'Inter', sans-serif",
-                      textShadow: `0 0 10px ${fill}66`,
                     }}
                   >
-                    {formatNumber(val, currentOverviewMetricDecimals)}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "rgba(255,255,255,0.4)",
-                      marginTop: 4,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {currentOverviewMetricLabel} (TB)
-                  </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#64748B", // Tên tỉnh màu xám
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        marginBottom: 6,
+                      }}
+                    >
+                      {row.province}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 32,
+                        fontWeight: 800,
+                        color: glow, // Dùng màu glow cho chữ để sắc nét hơn trên nền trắng
+                        lineHeight: 1,
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                    >
+                      {formatNumber(val, currentOverviewMetricDecimals)}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#64748B",
+                        marginTop: 4,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {currentOverviewMetricLabel} (TB)
+                    </div>
 
-                  {/* Badge thể hiện Cấp độ ô nhiễm */}
-                  <div
-                    style={{
-                      display: "inline-block",
-                      marginTop: 10,
-                      background: `${fill}22`,
-                      border: `1px solid ${fill}66`,
-                      borderRadius: 20,
-                      padding: "3px 12px",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: fill,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    {label}
+                    <div
+                      style={{
+                        display: "inline-block",
+                        marginTop: 10,
+                        background: `${fill}1A`, // Chút nền nhạt
+                        border: `1px solid ${fill}44`,
+                        borderRadius: 20,
+                        padding: "3px 12px",
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: glow, // Chữ đậm màu cấp độ
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      {label}
+                    </div>
                   </div>
-                </div>
-              </LeafletTooltip>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
-      <Legend />
+                </LeafletTooltip>
+              </CircleMarker>
+            );
+          })}
+        </MapContainer>
+        <Legend />
+      </div>
     </div>
   );
 };
