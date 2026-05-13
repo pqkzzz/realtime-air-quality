@@ -112,11 +112,6 @@ function BoxPlotAnomalies({
         },
       ],
       days: daily.length,
-      outliers: totalOutliers,
-      median:
-        boxData.length > 0 ? medianSum / boxData.length : null,
-      startDate: daily[0]?.dateKey ?? null,
-      endDate: daily[daily.length - 1]?.dateKey ?? null,
     };
   }, [rows, metricKey]);
 
@@ -201,7 +196,7 @@ function BoxPlotAnomalies({
         },
       },
     }),
-    []
+    [],
   );
 
   if (!rows.length || chartBundle.days === 0) {
@@ -225,44 +220,13 @@ function BoxPlotAnomalies({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A" }}>
-            Nhận diện ngoại lai theo IQR
-          </div>
-          <div style={{ fontSize: "13px", color: "#64748B", marginTop: "4px", lineHeight: 1.5 }}>
-          
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "10px 12px", minWidth: "100px" }}>
-            <div style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>Số ngày</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A", marginTop: "4px" }}>
-              {formatNumber(chartBundle.days, 0)}
-            </div>
-          </div>
-          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "10px 12px", minWidth: "110px" }}>
-            <div style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>Ngoại lai</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A", marginTop: "4px" }}>
-              {formatNumber(chartBundle.outliers, 0)}
-            </div>
-          </div>
-          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "10px 12px", minWidth: "110px" }}>
-            <div style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>Trung vị TB</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A", marginTop: "4px" }}>
-              {chartBundle.median == null ? "--" : formatNumber(chartBundle.median, 1)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ width: "100%", height: "260px" }}>
-        <Chart options={options} series={chartBundle.series} type="boxPlot" height={260} />
-      </div>
-
-      
+    <div style={{ width: "100%", height: "100%", minHeight: "260px" }}>
+      <Chart
+        options={options}
+        series={chartBundle.series}
+        type="boxPlot"
+        height="100%"
+      />
     </div>
   );
 }

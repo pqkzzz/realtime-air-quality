@@ -8,29 +8,20 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from "recharts";
 
-const BLUE = "#3B82F6"; // Same blue as RadarChart.jsx
-
-/**
- * Biểu đồ Cột Ngang Xếp hạng Tỉnh/Thành phố theo chỉ số AQI (hoặc PM2.5, PM10).
- *
- * Props:
- *   rows       – Mảng dữ liệu đã được lọc (theo tỉnh, ngày)
- *   metricKey  – Khóa chỉ số cần hiển thị (us_aqi | pm2_5 | pm10)
- *   metricLabel– Nhãn hiển thị (AQI, PM2.5, PM10)
- *   topN       – Số lượng tỉnh hiển thị (mặc định 5)
- */
 const HorizontalBarChart = ({
   rows = [],
   metricKey = "us_aqi",
   metricLabel = "AQI",
-  topN = 5,
+  topN = 8,
+  order = "desc", // "desc" cho top cao nhất, "asc" cho top thấp nhất
+  barColor = "#3B82F6", // Cho phép truyền màu từ bên ngoài
 }) => {
   const chartData = useMemo(() => {
     if (!rows.length) return [];
 
-    // Group by province → compute average of the selected metric
     const grouped = {};
     rows.forEach((row) => {
       const province = row.province;
@@ -50,11 +41,14 @@ const HorizontalBarChart = ({
         province,
         value: Math.round((sum / count) * 10) / 10,
       }))
-      .sort((a, b) => b.value - a.value) // Descending – highest first
+      .sort((a, b) => {
+        // Nếu là desc (giảm dần) thì b trừ a, nếu asc (tăng dần) thì a trừ b
+        return order === "desc" ? b.value - a.value : a.value - b.value;
+      })
       .slice(0, topN);
 
     return result;
-  }, [rows, metricKey, topN]);
+  }, [rows, metricKey, topN, order]);
 
   if (!rows.length) {
     return (
@@ -76,8 +70,8 @@ const HorizontalBarChart = ({
     );
   }
 
-  const barHeight = 36;
-  const chartHeight = Math.max(280, chartData.length * (barHeight + 16) + 70);
+  const barHeight = 28; // Thu nhỏ cột một chút để chứa 8 item thoải mái
+  const chartHeight = Math.max(300, chartData.length * (barHeight + 16) + 70);
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -94,7 +88,9 @@ const HorizontalBarChart = ({
             border: "1px solid rgba(255,255,255,0.1)",
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: "6px", fontSize: "14px" }}>
+          <div
+            style={{ fontWeight: 700, marginBottom: "6px", fontSize: "14px" }}
+          >
             {item.province}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -103,7 +99,7 @@ const HorizontalBarChart = ({
                 width: "8px",
                 height: "8px",
                 borderRadius: "50%",
-                backgroundColor: BLUE,
+                backgroundColor: barColor,
                 display: "inline-block",
               }}
             />
@@ -123,7 +119,8 @@ const HorizontalBarChart = ({
         <BarChart
           layout="vertical"
           data={chartData}
-          margin={{ top: 10, right: 40, left: 10, bottom: 10 }}
+          // Tăng margin phải (right) lên để có đủ chỗ hiển thị con số
+          margin={{ top: 10, right: 60, left: 10, bottom: 10 }}
           barCategoryGap="20%"
         >
           <CartesianGrid
@@ -148,8 +145,8 @@ const HorizontalBarChart = ({
           <YAxis
             type="category"
             dataKey="province"
-            width={145}
-            tick={{ fill: "#334155", fontSize: 12, fontWeight: 500 }}
+            width={120} // Độ rộng cho tên tỉnh
+            tick={{ fill: "#334155", fontSize: 12, fontWeight: 600 }}
             axisLine={{ stroke: "#CBD5E1" }}
             tickLine={false}
           />
@@ -165,8 +162,18 @@ const HorizontalBarChart = ({
             animationEasing="ease-out"
           >
             {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={BLUE} />
+              <Cell key={`cell-${index}`} fill={barColor} />
             ))}
+
+            {/* Hiển thị con số ở cuối thanh */}
+            <LabelList
+              dataKey="value"
+              position="right"
+              fill="#0F172A"
+              fontSize={13}
+              fontWeight={700}
+              formatter={(val) => val.toFixed(1)}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
