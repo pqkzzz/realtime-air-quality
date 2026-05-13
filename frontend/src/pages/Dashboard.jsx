@@ -3,6 +3,8 @@ import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
 import CalendarHeatmap from "../components/CalendarHeatmap";
+import BubbleMap from "../components/BubbleMap";
+import HistogramChart from "../components/HistogramChart";
 
 const MIN_DATE = "2026-04-01";
 const MAX_DATE = "2026-04-30";
@@ -204,6 +206,7 @@ function linearForecast(values) {
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loadError, setLoadError] = useState("");
 
@@ -274,70 +277,103 @@ const Dashboard = () => {
     };
   }, []);
 
+  // === AQI COLOR SYSTEM (US Standard — học từ repo tham khảo) ===
+  const AQI_LEVELS = [
+    { max: 50,  label: "Tốt",        color: "#00C853", bg: "rgba(0,200,83,0.1)" },
+    { max: 100, label: "Vừa phải",   color: "#FFD600", bg: "rgba(255,214,0,0.1)" },
+    { max: 150, label: "Nhạy cảm",   color: "#FF6D00", bg: "rgba(255,109,0,0.1)" },
+    { max: 200, label: "Không khỏe", color: "#D50000", bg: "rgba(213,0,0,0.1)" },
+    { max: 300, label: "Rất xấu",    color: "#6A1B9A", bg: "rgba(106,27,154,0.1)" },
+    { max: 999, label: "Nguy hiểm",  color: "#4E342E", bg: "rgba(78,52,46,0.1)" },
+  ];
+
+  const getAqiLevel = (aqi) => AQI_LEVELS.find(l => aqi <= l.max) || AQI_LEVELS[5];
+
+  const POLLUTANTS = [
+    { key: "pm2_5",           label: "PM2.5",  unit: "μg/m³", threshold: 15 },
+    { key: "pm10",            label: "PM10",   unit: "μg/m³", threshold: 45 },
+    { key: "carbon_monoxide", label: "CO",     unit: "μg/m³", threshold: 4000 },
+    { key: "sulphur_dioxide", label: "SO2",    unit: "μg/m³", threshold: 40 },
+    { key: "nitrogen_dioxide",label: "NO2",    unit: "μg/m³", threshold: 25 },
+    { key: "ozone",           label: "O3",     unit: "μg/m³", threshold: 100 },
+  ];
+
   const theme = {
-    bg: "#F1F5F9",
-    sidebar: "#1E3A8A",
-    card: "#FFFFFF",
-    textMain: "#0F172A",
-    textSub: "#64748B",
-    accent: "#3B82F6",
-    border: "#E2E8F0",
+    bg: "var(--bg-main)",
+    sidebar: "var(--bg-sidebar)",
+    card: "var(--bg-surface)",
+    textMain: "var(--text-main)",
+    textSub: "var(--text-sub)",
+    accent: "var(--accent)",
+    border: "var(--border-light)",
+    headerBg: "var(--bg-sidebar)",
   };
 
   const styles = {
     app: {
       display: "flex",
+      flexDirection: "column",
       minHeight: "100vh",
       backgroundColor: theme.bg,
-      fontFamily: '"Inter", sans-serif',
+      fontFamily: '"Montserrat", sans-serif',
+      color: theme.textMain,
     },
-    sidebar: {
-      width: "280px",
-      backgroundColor: theme.sidebar,
-      color: "#FFFFFF",
-      display: "flex",
-      flexDirection: "column",
-      padding: "30px 20px",
-      boxShadow: "4px 0 15px rgba(0,0,0,0.1)",
-      zIndex: 10,
-    },
-    logoContainer: {
+    topbar: {
+      background: theme.headerBg,
+      color: "#fff",
       display: "flex",
       alignItems: "center",
-      gap: "15px",
-      marginBottom: "50px",
-      padding: "0 10px",
+      justifyContent: "space-between",
+      padding: "0 40px",
+      height: "70px",
+      flexShrink: 0,
+      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
     },
-    logoIcon: { fontSize: "28px" },
-    logoText: {
-      fontSize: "22px",
+    topbarLogo: {
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+    },
+    topbarTitle: {
+      fontSize: "18px",
       fontWeight: "800",
-      letterSpacing: "0.5px",
+      letterSpacing: "-0.02em",
       margin: 0,
+      lineHeight: 1.2,
     },
-    navMenu: { display: "flex", flexDirection: "column", gap: "8px" },
-    navItem: (isActive) => ({
-      padding: "16px 20px",
-      borderRadius: "12px",
-      cursor: "pointer",
+    topbarSub: {
+      fontSize: "11px",
+      color: "rgba(255,255,255,0.85)",
+      margin: 0,
+      letterSpacing: "0.04em",
+    },
+    topbarActions: {
       display: "flex",
       alignItems: "center",
       gap: "12px",
-      backgroundColor: isActive ? "rgba(255, 255, 255, 0.15)" : "transparent",
-      color: "#FFFFFF",
-      fontWeight: isActive ? "700" : "500",
-      transition: "all 0.3s ease",
-      borderLeft: isActive
-        ? `4px solid ${theme.accent}`
-        : "4px solid transparent",
-    }),
-    main: { flex: 1, padding: "40px 50px", overflowY: "auto" },
+    },
+    body: {
+      display: "flex",
+      flex: 1,
+      minHeight: 0,
+    },
+    sidebar: {
+      display: "none", // Will use CSS positioning instead
+    },
+    main: { 
+      flex: 1, 
+      padding: "36px 48px", 
+      overflowY: "auto",
+    },
     header: {
       fontSize: "28px",
-      fontWeight: "800",
+      fontWeight: "700",
       color: theme.textMain,
-      marginBottom: "30px",
-      letterSpacing: "-0.5px",
+      marginBottom: "8px",
+      letterSpacing: "-0.02em",
     },
     filterSection: {
       display: "flex",
@@ -347,36 +383,43 @@ const Dashboard = () => {
     },
     filterBox: { display: "flex", flexDirection: "column", gap: "8px" },
     label: {
-      fontSize: "13px",
-      fontWeight: "600",
+      fontSize: "11px",
+      fontWeight: "700",
       color: theme.textSub,
       textTransform: "uppercase",
+      letterSpacing: "0.08em",
     },
     select: {
       padding: "12px 16px",
-      borderRadius: "10px",
-      border: `1px solid ${theme.border}`,
+      borderRadius: "14px",
+      border: "1px solid #E0E5F2",
       backgroundColor: theme.card,
       fontSize: "14px",
       color: theme.textMain,
       minWidth: "220px",
       outline: "none",
-      fontWeight: "500",
-      boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+      fontWeight: "600",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      cursor: "pointer",
     },
     radioGroup: {
       display: "flex",
-      gap: "10px",
+      gap: "16px",
       alignItems: "center",
-      height: "43px",
+      height: "46px",
       flexWrap: "wrap",
+      backgroundColor: theme.card,
+      padding: "0 18px",
+      borderRadius: "14px",
+      border: "1px solid #E0E5F2",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
     },
     radioLabel: {
       display: "flex",
       alignItems: "center",
-      gap: "6px",
+      gap: "8px",
       fontSize: "14px",
-      fontWeight: "500",
+      fontWeight: "600",
       color: theme.textMain,
       cursor: "pointer",
     },
@@ -384,49 +427,153 @@ const Dashboard = () => {
       display: "grid",
       gridTemplateColumns: `repeat(${cols}, 1fr)`,
       gap: "20px",
-      marginBottom: "30px",
+      marginBottom: "28px",
     }),
     kpiCard: {
-      backgroundColor: theme.card,
-      padding: "24px",
+      backgroundColor: "#111C44",
+      padding: "16px 20px",
       borderRadius: "16px",
-      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+      boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
       display: "flex",
       flexDirection: "column",
-      gap: "10px",
-      border: `1px solid ${theme.border}`,
+      gap: "6px",
+      border: "1px solid rgba(255,255,255,0.08)",
+      position: "relative",
+      overflow: "hidden",
     },
     kpiValue: {
-      fontSize: "28px",
+      fontSize: "26px",
       fontWeight: "800",
-      color: theme.textMain,
+      color: "#FFFFFF",
       margin: 0,
+      letterSpacing: "-1px",
+      lineHeight: 1,
     },
-    chartGrid: { display: "grid", gap: "20px" },
+    chartGrid: { display: "grid", gap: "24px" },
     chartCard: {
       backgroundColor: theme.card,
-      borderRadius: "16px",
-      padding: "24px",
-      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
-      border: `1px solid ${theme.border}`,
+      borderRadius: "20px",
+      padding: "28px",
+      boxShadow: "0px 14px 30px rgba(112,144,176,0.10)",
+      border: "none",
       display: "flex",
       flexDirection: "column",
     },
     chartTitle: {
-      fontSize: "16px",
+      fontSize: "17px",
       fontWeight: "700",
       color: theme.textMain,
-      marginBottom: "20px",
+      marginBottom: "22px",
+      letterSpacing: "-0.02em",
+    },
+    chartTitleRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "22px",
+    },
+    chartBadge: {
+      fontSize: "10px",
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+      padding: "4px 12px",
+      borderRadius: "30px",
+      backgroundColor: "rgba(67,24,255,0.08)",
+      color: "#4318FF",
     },
     chartPlaceholder: {
       flex: 1,
-      backgroundColor: "#F8FAFC",
-      borderRadius: "10px",
-      border: "2px dashed #E2E8F0",
+      borderRadius: "14px",
+      backgroundColor: "#F1F5F9",
       display: "flex",
+      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       minHeight: "300px",
+      gap: "12px",
+      position: "relative",
+      overflow: "hidden",
+    },
+    kpiIcon: {
+      width: "44px",
+      height: "44px",
+      borderRadius: "12px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "20px",
+      marginBottom: "4px",
+    },
+    kpiSubtext: {
+      fontSize: "13px",
+      color: theme.textSub,
+      fontWeight: "500",
+      margin: 0,
+    },
+    // === POLLUTANT CARD (học từ repo tham khảo) ===
+    pollutantCard: {
+      backgroundColor: "#111C44",
+      borderRadius: "14px",
+      padding: "14px 18px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      gap: "12px",
+    },
+    pollutantValue: {
+      fontSize: "22px",
+      fontWeight: "800",
+      color: "#FFFFFF",
+      margin: 0,
+      letterSpacing: "-0.5px",
+    },
+    pollutantUnit: {
+      fontSize: "12px",
+      color: "#FFFFFF",
+      fontWeight: "500",
+      marginTop: "2px",
+    },
+    // === AQI STATUS BADGE (học từ repo tham khảo) ===
+    aqiBadge: (color) => ({
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 12px",
+      borderRadius: "30px",
+      fontSize: "12px",
+      fontWeight: "700",
+      backgroundColor: color + "20",
+      color: color,
+      border: `1px solid ${color}40`,
+    }),
+    // === DELTA INDICATOR (học từ repo tham khảo) ===
+    deltaUp: {
+      fontSize: "13px",
+      fontWeight: "700",
+      color: "#E53E3E",
+      display: "flex",
+      alignItems: "center",
+      gap: "3px",
+    },
+    deltaDown: {
+      fontSize: "13px",
+      fontWeight: "700",
+      color: "#38A169",
+      display: "flex",
+      alignItems: "center",
+      gap: "3px",
+    },
+    // === SECTION LABEL (học từ repo tham khảo) ===
+    sectionLabel: {
+      fontSize: "10px",
+      fontWeight: "800",
+      color: theme.accent,
+      textTransform: "uppercase",
+      letterSpacing: "0.12em",
+      marginBottom: "6px",
     },
   };
 
@@ -580,6 +727,28 @@ const Dashboard = () => {
     };
   }, [trendRows, trendAqiValues]);
 
+  const histogramData = useMemo(() => {
+    if (!trendAqiValues.length) return [];
+    const bins = [
+      { name: "Tốt (0-50)", count: 0, color: "#10B981", min: 0, max: 50 },
+      { name: "TB (51-100)", count: 0, color: "#F59E0B", min: 51, max: 100 },
+      { name: "Kém (101-150)", count: 0, color: "#F97316", min: 101, max: 150 },
+      { name: "Xấu (151-200)", count: 0, color: "#EF4444", min: 151, max: 200 },
+      { name: "Rất xấu (201-300)", count: 0, color: "#8B5CF6", min: 201, max: 300 },
+      { name: "Nguy hại (>300)", count: 0, color: "#7F1D1D", min: 301, max: Infinity },
+    ];
+
+    trendAqiValues.forEach((val) => {
+      const targetBin = bins.find((b) => val >= b.min && val <= b.max);
+      if (targetBin) targetBin.count += 1;
+    });
+
+    return bins.filter((b) => b.count > 0);
+  }, [trendAqiValues]);
+
+  const currentOverviewMetricLabel = OVERVIEW_METRICS[selectedOverviewMetric]?.label || selectedOverviewMetric;
+  const currentOverviewMetricDecimals = OVERVIEW_METRICS[selectedOverviewMetric]?.decimals || 0;
+
   const correlationRows = useMemo(() => {
     if (!data.length) return [];
 
@@ -632,27 +801,102 @@ const Dashboard = () => {
     };
   }, [correlationRows, selectedCorrelationX, selectedCorrelationY]);
 
-  const currentOverviewMetricLabel =
-    OVERVIEW_METRICS[selectedOverviewMetric]?.label ?? "AQI";
-  const currentOverviewMetricDecimals =
-    OVERVIEW_METRICS[selectedOverviewMetric]?.decimals ?? 0;
 
   return (
     <div style={styles.app}>
       <style>
         {`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 
-          .sidebar-container { width: 280px; background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%); display: flex; flex-direction: column; padding: 35px 20px; box-shadow: 4px 0 20px rgba(0,0,0,0.15); z-index: 10; position: sticky; top: 0; height: 100vh; box-sizing: border-box; }
-          .sidebar-logo { display: flex; align-items: center; gap: 15px; margin-bottom: 55px; padding: 0 10px; }
-          .sidebar-logo-text { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; margin: 0; color: #FFFFFF; background: -webkit-linear-gradient(#FFFFFF, #94A3B8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-          .nav-menu { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-          .nav-item { padding: 16px 20px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; gap: 16px; color: #94A3B8; font-weight: 500; font-size: 15px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid transparent; }
-          .nav-item.active { background-color: rgba(59, 130, 246, 0.15); color: #FFFFFF; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: inset 4px 0 0 0 #3B82F6; }
-          .nav-icon { font-size: 22px; transition: transform 0.3s ease; }
-          .nav-item:hover .nav-icon { transform: scale(1.1); }
-          .sidebar-footer { padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; }
-          .sidebar-footer-text { font-size: 12px; color: #64748B; margin: 4px 0; font-weight: 500; }
+          .sidebar-rail {
+            width: 80px;
+            height: auto;
+            max-height: 80vh;
+            background: rgba(17, 28, 68, 0.9) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 35px;
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            padding: 25px 0;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            overflow: hidden;
+          }
+          .sidebar-rail:hover {
+            width: 260px;
+            border-radius: 25px;
+          }
+          .nav-rail-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            border: none;
+            background: transparent;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            margin: 8px auto;
+            flex-shrink: 0;
+            padding: 0;
+            overflow: hidden;
+            white-space: nowrap;
+          }
+          .sidebar-rail:hover .nav-rail-btn {
+            width: 220px;
+            justify-content: flex-start;
+            padding: 0 20px;
+            margin: 6px 20px;
+          }
+          .nav-rail-btn.active {
+            background: #4318FF;
+            color: #FFFFFF;
+            box-shadow: 0 10px 20px rgba(67, 24, 255, 0.3);
+          }
+          .nav-rail-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+          }
+          .nav-rail-label {
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateX(-10px);
+            margin-left: 15px;
+            font-weight: 600;
+            font-size: 14px;
+            pointer-events: none;
+          }
+          .sidebar-rail:hover .nav-rail-label {
+            opacity: 1;
+            transform: translateX(0);
+            transition-delay: 0.1s;
+            pointer-events: auto;
+          }
+          .nav-rail-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            transition: transform 0.3s;
+          }
+          .sidebar-rail:hover .nav-rail-icon {
+            transform: scale(1.1);
+          }
+          .main-content {
+            flex: 1;
+            margin-left: 110px;
+            min-width: 0;
+            background-color: var(--bg-main);
+            padding: 36px 48px;
+          }
 
           /* === HIỆU ỨNG SIDEBAR (Nâng cấp) === */
           .nav-item:hover { 
@@ -662,95 +906,271 @@ const Dashboard = () => {
             box-shadow: -4px 0 15px rgba(59, 130, 246, 0.2); 
           }
 
-          /* === HIỆU ỨNG CHO CARD (KPI & Biểu đồ) === */
+          /* === CARD HOVER === */
           .hover-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
           }
           .hover-card:hover {
-            transform: translateY(-5px); 
-            box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1) !important; 
-            border-color: #93C5FD !important; 
+            transform: translateY(-4px);
+            box-shadow: 0px 22px 45px rgba(112, 144, 176, 0.18) !important;
           }
 
-          /* === HIỆU ỨNG CHO INPUT & SELECT === */
-          .hover-input {
+          /* === TOPBAR BUTTONS === */
+          .topbar-pill-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .topbar-pill-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.4);
+          }
+          .dot-icon {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            display: inline-block;
+          }
+          .hover-input:focus { border-color: #4318FF !important; box-shadow: 0 0 0 4px rgba(67,24,255,0.15) !important; outline: none; }
+
+          /* === SKELETON ANIMATION === */
+          @keyframes skeleton-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+          .skeleton-line {
+            border-radius: 8px;
+            background: linear-gradient(90deg, #E0E5F2 25%, #EEF2FB 50%, #E0E5F2 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
+          }
+          @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+          .placeholder-icon {
+            font-size: 40px;
+            opacity: 0.25;
+          }
+          .placeholder-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #A3AED0;
+            letter-spacing: 0.02em;
+          }
+
+          /* === STICKY FILTER BAR === */
+          .filter-bar-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(244, 247, 254, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            margin: 0 -60px 35px -60px;
+            padding: 20px 60px;
+            border-bottom: 1px solid rgba(67, 24, 255, 0.08);
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+          }
+
+          /* === RESPONSIVE KPI GRID === */
+          .kpi-responsive {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 28px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          }
+
+          /* === KPI CARD ACCENT LINE === */
+          .kpi-accent-bar {
+            height: 4px;
+            border-radius: 2px;
+            margin-bottom: 20px;
+          }
+
+          /* === PAGE HEADER STYLING === */
+          .page-header-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 35px;
+          }
+          .page-header-sub {
+            font-size: 14px;
+            font-weight: 500;
+            color: #A3AED0;
+            margin-top: 6px;
+          }
+          /* === NAV RAIL (icon sidebar) === */
+          .nav-rail-btn {
+            width: 52px; height: 52px;
+            border-radius: 16px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.55);
+            font-size: 22px;
+            border: none; background: transparent;
+            white-space: nowrap;
+          }
+          .nav-rail-btn.expanded {
+            width: calc(100% - 24px);
+            height: 48px;
+            flex-direction: row;
+            justify-content: flex-start;
+            padding-left: 20px;
+            gap: 12px;
+            border-radius: 12px;
+            margin: 0 12px;
+          }
+          .nav-rail-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+          .nav-rail-btn.active { background: rgba(255,255,255,0.18); color: #fff; }
+          .nav-rail-btn.active::before {
+            content: '';
+            position: absolute; left: 0; top: 50%;
+            transform: translateY(-50%);
+            width: 4px; height: 28px;
+            background: #4318FF;
+            border-radius: 0 4px 4px 0;
+          }
+          .nav-rail-label {
+            font-size: 9px; font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: inherit;
+            line-height: 1;
             transition: all 0.3s ease;
           }
-          .hover-input:hover {
-            border-color: #3B82F6 !important;
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1) !important;
-            transform: translateY(-1px);
+          .nav-rail-label.expanded {
+            font-size: 13px !important;
+            text-transform: none;
+            letter-spacing: normal;
+            font-weight: 600;
           }
-          .hover-input:focus {
-            border-color: #2563EB !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
-            outline: none;
+          .nav-rail-sep { height: 1px; width: 40px; background: rgba(255,255,255,0.1); margin: 8px 0; }
+
+          /* === TOPBAR BTN === */
+          .topbar-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 18px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
           }
+          .topbar-btn:hover { background: rgba(255,255,255,0.2); }
+
+          /* === POLLUTANT GRID (học từ repo tham khảo) === */
+          .pollutant-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+          }
+          @media (max-width: 1200px) { .pollutant-grid { grid-template-columns: repeat(2,1fr); } }
+
+          /* === AQI LEGEND === */
+          .aqi-legend { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+          .aqi-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; }
+          .aqi-dot { width: 10px; height: 10px; border-radius: 50%; }
         `}
       </style>
 
-      <div className="sidebar-container">
-        <div className="sidebar-logo">
-          <h1 className="sidebar-logo-text">AQI System</h1>
-        </div>
-
-        <div className="nav-menu">
-          <div
-            className={
-              activeTab === "overview" ? "nav-item active" : "nav-item"
-            }
-            onClick={() => setActiveTab("overview")}
-          >
-            <span>Tổng quan không gian</span>
-          </div>
-          <div
-            className={activeTab === "trend" ? "nav-item active" : "nav-item"}
-            onClick={() => setActiveTab("trend")}
-          >
-            <span>Phân tích xu hướng</span>
-          </div>
-          <div
-            className={
-              activeTab === "correlation" ? "nav-item active" : "nav-item"
-            }
-            onClick={() => setActiveTab("correlation")}
-          >
-            <span>Phân tích tương quan</span>
+      {/* === TOPBAR === */}
+      <div style={styles.topbar}>
+        <div style={styles.topbarLogo}>
+          {!isSidebarOpen && (
+            <button className="topbar-btn" onClick={() => setIsSidebarOpen(true)} style={{padding:"8px 12px", marginRight:"12px"}} title="Mở menu">
+              <span style={{fontSize:"18px", lineHeight:1}}>☰</span>
+            </button>
+          )}
+          <div>
+            <p style={styles.topbarTitle}>Phân tích Chỉ số Chất lượng Không khí Việt Nam</p>
+            <p style={styles.topbarSub}>GVHD: Lê Hoàng Anh • KHTN • HCMUS • Năm 2025–2026</p>
           </div>
         </div>
-
-        <div className="sidebar-footer">
-          <p className="sidebar-footer-text">© 2026 DoAnAQI</p>
-          <p className="sidebar-footer-text">IS - HCMUS</p>
+        <div style={styles.topbarActions}>
+          <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            <span style={{fontSize:"11px",fontWeight:"700",color:"rgba(255,255,255,0.55)",textTransform:"uppercase",letterSpacing:"0.08em"}}>AQI HIỆN TẠI:</span>
+            {[{max:50,lbl:"Tốt",c:"#00C853"},{max:100,lbl:"Vừa",c:"#FFD600"},{max:150,lbl:"Nhạy cảm",c:"#FF6D00"},{max:200,lbl:"Xấu",c:"#D50000"}].map(({lbl,c})=>(
+              <span key={lbl} style={{display:"flex",alignItems:"center",gap:"5px",fontSize:"11px",fontWeight:"700",color:"rgba(255,255,255,0.8)"}}>
+                <span style={{width:"9px",height:"9px",borderRadius:"50%",backgroundColor:c,display:"inline-block"}}/>{lbl}
+              </span>
+            ))}
+          </div>
+          <button className="topbar-pill-btn">
+            <span style={{fontSize:"14px"}}>↻</span> Làm mới
+          </button>
         </div>
       </div>
 
-      <div style={styles.main}>
-        {loadError ? (
-          <div
-            style={{ marginBottom: "20px", color: "#DC2626", fontWeight: 600 }}
-          >
-            {loadError}
-          </div>
-        ) : null}
+      {/* === BODY = RAIL + MAIN === */}
+      <div style={styles.body}>
+        {/* NAVIGATION RAIL (icon-only, học từ repo tham khảo) */}
+        <div className="sidebar-rail">
+          {[
+            {tab:"overview",  label:"Tổng quan", icon: "📊"},
+            {tab:"trend",     label:"Xu hướng", icon: "📈"},
+            {tab:"correlation",label:"Tương quan", icon: "🔗"},
+          ].map(({tab,label,icon}) => (
+            <button
+              key={tab}
+              className={`nav-rail-btn${activeTab===tab?" active":""}`}
+              onClick={()=>setActiveTab(tab)}
+              title={label}
+            >
+              <span className="nav-rail-icon">{icon}</span>
+              <span className="nav-rail-label">
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div style={styles.main} className="main-content">
+          {loadError && (
+            <div style={{marginBottom:"20px",color:"#DC2626",fontWeight:600}}>{loadError}</div>
+          )}
 
         {activeTab === "overview" && (
           <>
-            <h2 style={styles.header}>TỔNG QUAN HIỆN TRẠNG KHÔNG GIAN</h2>
+            {/* PAGE HEADER */}
+            <div className="page-header-row">
+              <div>
+                <h2 style={styles.header}>Tổng quan Chất lượng Không khí</h2>
+              </div>
+              <div style={{display:"flex", alignItems:"center", gap:"8px", fontSize:"13px", fontWeight:"600", color:"#4318FF", background:"rgba(67,24,255,0.08)", padding:"8px 16px", borderRadius:"30px"}}>
+                <span style={{width:"8px",height:"8px",borderRadius:"50%",backgroundColor:"#00C853"}}></span> Đang cập nhật
+              </div>
+            </div>
 
-            <div style={styles.filterSection}>
+            {/* STICKY FILTER BAR */}
+            <div className="filter-bar-sticky">
               <div style={styles.filterBox}>
-                <span style={styles.label}>Chọn tỉnh/thành</span>
-                <div
-                  className="hover-input"
-                  style={{
-                    ...styles.select,
-                    padding: 0,
-                    border: "none",
-                    boxShadow: "none",
-                    borderRadius: "10px",
-                  }}
-                >
+                <span style={styles.label}>Tỉnh/thành</span>
+                <div className="hover-input" style={{...styles.select, padding:0, border:"none", boxShadow:"none", borderRadius:"16px"}}>
                   <ProvinceSelector
                     provinces={provinces}
                     value={selectedOverviewProvinces}
@@ -759,143 +1179,121 @@ const Dashboard = () => {
                 </div>
               </div>
               <div style={styles.filterBox}>
-                <span style={styles.label}>Chỉ số quan tâm</span>
+                <span style={styles.label}>Chỉ số</span>
                 <div style={styles.radioGroup}>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="overviewMetric"
-                      checked={selectedOverviewMetric === "us_aqi"}
-                      onChange={() => setSelectedOverviewMetric("us_aqi")}
-                    />
-                    AQI
-                  </label>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="overviewMetric"
-                      checked={selectedOverviewMetric === "pm2_5"}
-                      onChange={() => setSelectedOverviewMetric("pm2_5")}
-                    />
-                    PM2.5
-                  </label>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="overviewMetric"
-                      checked={selectedOverviewMetric === "pm10"}
-                      onChange={() => setSelectedOverviewMetric("pm10")}
-                    />
-                    PM10
-                  </label>
+                  {[{val:"us_aqi",lab:"AQI"},{val:"pm2_5",lab:"PM2.5"},{val:"pm10",lab:"PM10"}].map(({val,lab}) => (
+                    <label key={val} style={styles.radioLabel}>
+                      <input type="radio" name="overviewMetric" checked={selectedOverviewMetric===val} onChange={()=>setSelectedOverviewMetric(val)} />
+                      {lab}
+                    </label>
+                  ))}
                 </div>
               </div>
-              <div
-                style={{
-                  ...styles.filterBox,
-                  flexBasis: "100%",
-                  marginTop: "10px",
-                }}
-              >
-                <span style={styles.label}>Khoảng thời gian quan sát</span>
-                <div
-                  style={{ display: "flex", gap: "15px", alignItems: "center" }}
-                >
-                  <input
-                    className="hover-input"
-                    type="date"
-                    min={MIN_DATE}
-                    max={MAX_DATE}
-                    value={selectedOverviewStartDate}
-                    onChange={(event) =>
-                      setSelectedOverviewStartDate(event.target.value)
-                    }
-                    style={{ ...styles.select, minWidth: "200px" }}
-                  />
-                  <span
-                    style={{
-                      fontWeight: "600",
-                      color: theme.textSub,
-                      fontSize: "14px",
-                    }}
-                  >
-                    đến
-                  </span>
-                  <input
-                    className="hover-input"
-                    type="date"
-                    min={MIN_DATE}
-                    max={MAX_DATE}
-                    value={selectedOverviewEndDate}
-                    onChange={(event) =>
-                      setSelectedOverviewEndDate(event.target.value)
-                    }
-                    style={{ ...styles.select, minWidth: "200px" }}
-                  />
-                </div>
+              <div style={styles.filterBox}>
+                <span style={styles.label}>Từ ngày</span>
+                <input className="hover-input" type="date" min={MIN_DATE} max={MAX_DATE} value={selectedOverviewStartDate} onChange={e=>setSelectedOverviewStartDate(e.target.value)} style={{...styles.select, minWidth:"180px"}} />
+              </div>
+              <div style={{...styles.filterBox, justifyContent:"flex-end", paddingBottom:"2px"}}>
+                <span style={{...styles.label, opacity:0}}>x</span>
+                <span style={{fontWeight:"700", color:theme.textSub, fontSize:"16px", lineHeight:"48px"}}>→</span>
+              </div>
+              <div style={styles.filterBox}>
+                <span style={styles.label}>Đến ngày</span>
+                <input className="hover-input" type="date" min={MIN_DATE} max={MAX_DATE} value={selectedOverviewEndDate} onChange={e=>setSelectedOverviewEndDate(e.target.value)} style={{...styles.select, minWidth:"180px"}} />
               </div>
             </div>
 
-            <div style={styles.kpiGrid(4)}>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Chỉ số trung bình</span>
-                <h3 style={styles.kpiValue}>
-                  {overviewStats.average == null
-                    ? "--"
-                    : `${formatNumber(overviewStats.average, currentOverviewMetricDecimals)} ${currentOverviewMetricLabel !== "AQI" ? currentOverviewMetricLabel : ""}`.trim()}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Mức ô nhiễm cao nhất</span>
-                <h3 style={styles.kpiValue}>
-                  {overviewStats.max == null
-                    ? "--"
-                    : `${formatNumber(overviewStats.max, currentOverviewMetricDecimals)} ${currentOverviewMetricLabel !== "AQI" ? currentOverviewMetricLabel : ""}`.trim()}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Số lượng trạm báo động</span>
-                <h3 style={styles.kpiValue}>
-                  {overviewStats.warningProvinces == null
-                    ? "--"
-                    : formatNumber(overviewStats.warningProvinces, 0)}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Mức vượt chuẩn WHO</span>
-                <h3 style={styles.kpiValue}>
-                  {overviewStats.exceedPct == null
-                    ? "--"
-                    : formatPercent(overviewStats.exceedPct, 1)}
-                </h3>
-              </div>
+            {/* POLLUTANT GRID (học từ repo tham khảo: 6 thẻ chất ô nhiễm với icon + giá trị + màu viền) */}
+            {data.length > 0 && (() => {
+              const latest = data[data.length - 1];
+              return (
+                <div className="pollutant-grid">
+                  {POLLUTANTS.map(({key,label,unit,threshold}) => {
+                    const val = overviewStats.average != null && key === (selectedOverviewMetric === 'us_aqi' ? 'pm2_5' : selectedOverviewMetric)
+                      ? overviewStats.average
+                      : (latest[key] ? parseFloat(latest[key]) : null);
+                    const pct = val != null ? (val / threshold) : null;
+                    return (
+                      <div key={key} className="hover-card" style={{...styles.pollutantCard, borderLeft: `1px solid ${theme.border}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                          <div>
+                            <div style={{fontSize:"12px",fontWeight:"700",color:"#FFFFFF",textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</div>
+                            <div style={{fontSize:"11px",color:"#FFFFFF",fontWeight:500}}>ngưỡng: {threshold} {unit}</div>
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          <p style={styles.pollutantValue}>
+                            {val != null ? formatNumber(val, 1) : "--"}
+                          </p>
+                          <p style={styles.pollutantUnit}>{unit}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+            <div className="kpi-responsive">
+              {[
+                { label:"Chỉ số trung bình",
+                  extra: overviewStats.average != null ? getAqiLevel(overviewStats.average) : null,
+                  value: overviewStats.average==null ? "--" : `${formatNumber(overviewStats.average, currentOverviewMetricDecimals)} ${currentOverviewMetricLabel!=="AQI"?currentOverviewMetricLabel:""}`.trim() },
+                { label:"Mức ô nhiễm cao nhất",
+                  extra: overviewStats.max != null ? getAqiLevel(overviewStats.max) : null,
+                  value: overviewStats.max==null ? "--" : `${formatNumber(overviewStats.max, currentOverviewMetricDecimals)} ${currentOverviewMetricLabel!=="AQI"?currentOverviewMetricLabel:""}`.trim() },
+                { label:"Số trạm báo động",
+                  extra: null,
+                  value: overviewStats.warningProvinces==null ? "--" : formatNumber(overviewStats.warningProvinces,0) },
+                { label:"Vượt chuẩn WHO",
+                  extra: null,
+                  value: overviewStats.exceedPct==null ? "--" : formatPercent(overviewStats.exceedPct,1) },
+              ].map(({label,value,extra}) => (
+                <div key={label} className="hover-card" style={styles.kpiCard}>
+                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"8px"}}>
+                    <span style={{...styles.label, color: "#FFFFFF"}}>{label}</span>
+                    {extra && (
+                      <span style={styles.aqiBadge(extra.color)}>&#9679; {extra.label}</span>
+                    )}
+                  </div>
+                  <h3 style={styles.kpiValue}>{value}</h3>
+                </div>
+              ))}
             </div>
 
-            <div
-              style={{
-                ...styles.chartGrid,
-                gridTemplateColumns: "1.2fr 1fr",
-                gridTemplateRows: "auto auto",
-              }}
-            >
-              <div
-                className="hover-card"
-                style={{ ...styles.chartCard, gridRow: "span 2" }}
-              >
-                <h3 style={styles.chartTitle}>Bubble map</h3>
-                <div
-                  style={{ ...styles.chartPlaceholder, minHeight: "680px" }}
-                ></div>
+            {/* CHART GRID — asymmetric: map spans 2 rows */}
+            <div style={{...styles.chartGrid, gridTemplateColumns:"1.2fr 1fr", gridTemplateRows:"auto auto"}}>
+              <div className="hover-card" style={{...styles.chartCard, gridRow:"span 2"}}>
+                <div style={styles.chartTitleRow}>
+                  <h3 style={{...styles.chartTitle, marginBottom:0}}>Bản đồ AQI theo khu vực</h3>
+                  <span style={styles.chartBadge}>Không gian</span>
+                </div>
+                <BubbleMap 
+                  overviewRows={overviewRows}
+                  selectedOverviewMetric={selectedOverviewMetric}
+                  overviewMetricThreshold={overviewMetricThreshold}
+                  currentOverviewMetricLabel={currentOverviewMetricLabel}
+                  currentOverviewMetricDecimals={currentOverviewMetricDecimals}
+                />
               </div>
               <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>Donut chart</h3>
-                <div style={styles.chartPlaceholder}></div>
+                <div style={styles.chartTitleRow}>
+                  <h3 style={{...styles.chartTitle, marginBottom:0}}>Tỉ lệ ô nhiễm</h3>
+                  <span style={styles.chartBadge}>Donut</span>
+                </div>
+                <div style={styles.chartPlaceholder}>
+                  <p className="placeholder-text">Chưa có dữ liệu</p>
+                  <div className="skeleton-line" style={{width:"50%",height:"10px"}} />
+                </div>
               </div>
               <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>
-                  Biểu đồ thanh ngang xếp hạng Tỉnh/Thành
-                </h3>
-                <div style={styles.chartPlaceholder}></div>
+                <div style={styles.chartTitleRow}>
+                  <h3 style={{...styles.chartTitle, marginBottom:0}}>Xếp hạng Tỉnh/Thành</h3>
+                  <span style={styles.chartBadge}>Thanh ngang</span>
+                </div>
+                <div style={styles.chartPlaceholder}>
+                  <p className="placeholder-text">Chưa có dữ liệu</p>
+                  <div className="skeleton-line" style={{width:"55%",height:"10px"}} />
+                </div>
               </div>
             </div>
           </>
@@ -903,146 +1301,87 @@ const Dashboard = () => {
 
         {activeTab === "trend" && (
           <>
-            <h2 style={styles.header}>PHÂN TÍCH XU HƯỚNG THEO KHU VỰC</h2>
+            <div className="page-header-row">
+              <div>
+                <h2 style={styles.header}>Phân tích Xu hướng theo Khu vực</h2>
+              </div>
+            </div>
 
-            <div style={styles.filterSection}>
+            <div className="filter-bar-sticky">
               <div style={styles.filterBox}>
-                <span style={styles.label}>Chọn 1 tỉnh/thành</span>
-                <select
-                  className="hover-input"
-                  value={selectedTrendProvince}
-                  onChange={(event) =>
-                    setSelectedTrendProvince(event.target.value)
-                  }
-                  style={styles.select}
-                >
+                <span style={styles.label}>Tỉnh/thành</span>
+                <select className="hover-input" value={selectedTrendProvince} onChange={e=>setSelectedTrendProvince(e.target.value)} style={styles.select}>
                   <option value="">Toàn quốc</option>
-                  {provinces.map((province) => (
-                    <option key={province} value={province}>
-                      {province}
-                    </option>
-                  ))}
+                  {provinces.map(p=>(<option key={p} value={p}>{p}</option>))}
                 </select>
               </div>
               <div style={styles.filterBox}>
                 <span style={styles.label}>Chế độ xem</span>
                 <div style={styles.radioGroup}>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="granularity"
-                      checked={selectedTrendGranularity === "day"}
-                      onChange={() => setSelectedTrendGranularity("day")}
-                    />
-                    Theo Ngày
-                  </label>
-                  <label style={styles.radioLabel}>
-                    <input
-                      type="radio"
-                      name="granularity"
-                      checked={selectedTrendGranularity === "week"}
-                      onChange={() => setSelectedTrendGranularity("week")}
-                    />
-                    Theo Tuần
-                  </label>
+                  {[{val:"day",lab:"Theo Ngày"},{val:"week",lab:"Theo Tuần"}].map(({val,lab})=>(
+                    <label key={val} style={styles.radioLabel}>
+                      <input type="radio" name="granularity" checked={selectedTrendGranularity===val} onChange={()=>setSelectedTrendGranularity(val)} />
+                      {lab}
+                    </label>
+                  ))}
                 </div>
               </div>
               <div style={styles.filterBox}>
                 <span style={styles.label}>Chọn ngày</span>
-                <input
-                  className="hover-input"
-                  type="date"
-                  min={MIN_DATE}
-                  max={MAX_DATE}
-                  value={selectedTrendDate}
-                  onChange={(event) => setSelectedTrendDate(event.target.value)}
-                  style={styles.select}
-                />
+                <input className="hover-input" type="date" min={MIN_DATE} max={MAX_DATE} value={selectedTrendDate} onChange={e=>setSelectedTrendDate(e.target.value)} style={styles.select} />
               </div>
             </div>
 
-            <div style={styles.kpiGrid(6)}>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Trung bình toàn kỳ</span>
-                <h3 style={styles.kpiValue}>
-                  {trendStats.average == null
-                    ? "--"
-                    : formatNumber(trendStats.average, 0)}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Số ngày vượt chuẩn</span>
-                <h3 style={styles.kpiValue}>
-                  {trendStats.exceedDays == null
-                    ? "--"
-                    : formatNumber(trendStats.exceedDays, 0)}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Mức độ biến động</span>
-                <h3 style={styles.kpiValue}>
-                  {trendStats.volatility == null
-                    ? "--"
-                    : formatPercent(trendStats.volatility, 1)}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Cao nhất / Thấp nhất</span>
-                <h3 style={styles.kpiValue}>
-                  {trendStats.max == null
-                    ? "--"
-                    : `${formatNumber(trendStats.max, 0)} / ${formatNumber(trendStats.min, 0)}`}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Dự báo đỉnh ô nhiễm</span>
-                <h3 style={styles.kpiValue}>
-                  {trendStats.forecastPeak == null
-                    ? "--"
-                    : formatNumber(trendStats.forecastPeak, 0)}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Tổng số giờ rủi ro</span>
-                <h3 style={styles.kpiValue}>
-                  {trendStats.riskHours == null
-                    ? "--"
-                    : formatNumber(trendStats.riskHours, 0)}
-                </h3>
-              </div>
+            <div className="kpi-responsive">
+              {[
+                {label:"Trung bình toàn kỳ", value:trendStats.average==null?"--":formatNumber(trendStats.average,0)},
+                {label:"Ngày vượt chuẩn", value:trendStats.exceedDays==null?"--":formatNumber(trendStats.exceedDays,0)},
+                {label:"Mức biến động", value:trendStats.volatility==null?"--":formatPercent(trendStats.volatility,1)},
+                {label:"Cao nhất / Thấp nhất", value:trendStats.max==null?"--":`${formatNumber(trendStats.max,0)} / ${formatNumber(trendStats.min,0)}`},
+                {label:"Dự báo đỉnh ô nhiễm", value:trendStats.forecastPeak==null?"--":formatNumber(trendStats.forecastPeak,0)},
+                {label:"Tổng giờ rủi ro", value:trendStats.riskHours==null?"--":formatNumber(trendStats.riskHours,0)},
+              ].map(({label,value})=>(
+                <div key={label} className="hover-card" style={styles.kpiCard}>
+                  <div style={{marginBottom:"8px"}}>
+                    <span style={{...styles.label, color: "#FFFFFF"}}>{label}</span>
+                  </div>
+                  <h3 style={styles.kpiValue}>{value}</h3>
+                </div>
+              ))}
             </div>
 
             <div style={styles.chartGrid}>
               <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>Biểu đồ Đường Chuỗi thời gian</h3>
-                <TimeSeriesLineChart 
-                  rows={trendRows} 
-                  granularity={selectedTrendGranularity} 
-                  threshold={100} 
-                />
-
+                <div style={styles.chartTitleRow}>
+                  <h3 style={{...styles.chartTitle,marginBottom:0}}>Chuỗi thời gian AQI</h3>
+                  <span style={styles.chartBadge}>Line Chart</span>
+                </div>
+                <TimeSeriesLineChart rows={trendRows} granularity={selectedTrendGranularity} threshold={100} />
               </div>
-              <div
-                style={{
-                  ...styles.chartGrid,
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                }}
-              >
+              <div style={{...styles.chartGrid, gridTemplateColumns:"repeat(3, 1fr)"}}>
                 <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Biểu đồ hộp râu ngoại lai</h3>
-                  <div style={styles.chartPlaceholder}></div>
+                  <div style={styles.chartTitleRow}>
+                    <h3 style={{...styles.chartTitle,marginBottom:0}}>Hộp râu ngoại lai</h3>
+                    <span style={styles.chartBadge}>Boxplot</span>
+                  </div>
+                  <div style={styles.chartPlaceholder}>
+                    <p className="placeholder-text">Chưa có dữ liệu</p>
+                    <div className="skeleton-line" style={{width:"55%",height:"10px"}}/>
+                  </div>
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Ma trận Lịch nhiệt</h3>
-                  <CalendarHeatmap 
-                    data={data} 
-                    province={selectedTrendProvince} 
-                    isCompact={true} 
-                  />
+                  <div style={styles.chartTitleRow}>
+                    <h3 style={{...styles.chartTitle,marginBottom:0}}>Lịch nhiệt</h3>
+                    <span style={styles.chartBadge}>Heatmap</span>
+                  </div>
+                  <CalendarHeatmap data={data} province={selectedTrendProvince} isCompact={true} />
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Biểu đồ Phân phối Tần suất</h3>
-                  <div style={styles.chartPlaceholder}></div>
+                  <div style={styles.chartTitleRow}>
+                    <h3 style={{...styles.chartTitle,marginBottom:0}}>Phân phối Tần suất</h3>
+                    <span style={styles.chartBadge}>Histogram</span>
+                  </div>
+                  <HistogramChart histogramData={histogramData} />
                 </div>
               </div>
             </div>
@@ -1051,34 +1390,24 @@ const Dashboard = () => {
 
         {activeTab === "correlation" && (
           <>
-            <h2 style={styles.header}>PHÂN TÍCH TƯƠNG QUAN CÁC CHỈ SỐ</h2>
+            <div className="page-header-row">
+              <div>
+                <h2 style={styles.header}>Phân tích Tương quan Các Chỉ số</h2>
+              </div>
+            </div>
 
-            <div style={styles.filterSection}>
+            <div className="filter-bar-sticky">
               <div style={styles.filterBox}>
-                <span style={styles.label}>Chỉ số chính (Biến Y)</span>
-                <select
-                  className="hover-input"
-                  value={selectedCorrelationY}
-                  onChange={(event) =>
-                    setSelectedCorrelationY(event.target.value)
-                  }
-                  style={styles.select}
-                >
+                <span style={styles.label}>Biến Y (mục tiêu)</span>
+                <select className="hover-input" value={selectedCorrelationY} onChange={e=>setSelectedCorrelationY(e.target.value)} style={styles.select}>
                   <option value="us_aqi">AQI</option>
                   <option value="pm2_5">PM2.5</option>
                   <option value="pm10">PM10</option>
                 </select>
               </div>
               <div style={styles.filterBox}>
-                <span style={styles.label}>Chỉ số thành phần (Biến X)</span>
-                <select
-                  className="hover-input"
-                  value={selectedCorrelationX}
-                  onChange={(event) =>
-                    setSelectedCorrelationX(event.target.value)
-                  }
-                  style={styles.select}
-                >
+                <span style={styles.label}>Biến X (thành phần)</span>
+                <select className="hover-input" value={selectedCorrelationX} onChange={e=>setSelectedCorrelationX(e.target.value)} style={styles.select}>
                   <option value="carbon_monoxide">CO</option>
                   <option value="nitrogen_dioxide">NO2</option>
                   <option value="sulphur_dioxide">SO2</option>
@@ -1088,119 +1417,72 @@ const Dashboard = () => {
                 </select>
               </div>
               <div style={styles.filterBox}>
-                <span style={styles.label}>Chọn tỉnh/thành</span>
-                <select
-                  className="hover-input"
-                  value={selectedCorrelationProvince}
-                  onChange={(event) =>
-                    setSelectedCorrelationProvince(event.target.value)
-                  }
-                  style={styles.select}
-                >
+                <span style={styles.label}>Tỉnh/thành</span>
+                <select className="hover-input" value={selectedCorrelationProvince} onChange={e=>setSelectedCorrelationProvince(e.target.value)} style={styles.select}>
                   <option value="">Toàn quốc</option>
-                  {provinces.map((province) => (
-                    <option key={province} value={province}>
-                      {province}
-                    </option>
-                  ))}
+                  {provinces.map(p=>(<option key={p} value={p}>{p}</option>))}
                 </select>
               </div>
-              <div
-                style={{
-                  ...styles.filterBox,
-                  flexBasis: "100%",
-                  marginTop: "10px",
-                }}
-              >
-                <span style={styles.label}>Khoảng thời gian phân tích</span>
-                <div
-                  style={{ display: "flex", gap: "15px", alignItems: "center" }}
-                >
-                  <input
-                    className="hover-input"
-                    type="date"
-                    min={MIN_DATE}
-                    max={MAX_DATE}
-                    value={selectedCorrelationStartDate}
-                    onChange={(event) =>
-                      setSelectedCorrelationStartDate(event.target.value)
-                    }
-                    style={{ ...styles.select, minWidth: "200px" }}
-                  />
-                  <span
-                    style={{
-                      fontWeight: "600",
-                      color: theme.textSub,
-                      fontSize: "14px",
-                    }}
-                  >
-                    đến
-                  </span>
-                  <input
-                    className="hover-input"
-                    type="date"
-                    min={MIN_DATE}
-                    max={MAX_DATE}
-                    value={selectedCorrelationEndDate}
-                    onChange={(event) =>
-                      setSelectedCorrelationEndDate(event.target.value)
-                    }
-                    style={{ ...styles.select, minWidth: "200px" }}
-                  />
+              <div style={styles.filterBox}>
+                <span style={styles.label}>Từ ngày</span>
+                <input className="hover-input" type="date" min={MIN_DATE} max={MAX_DATE} value={selectedCorrelationStartDate} onChange={e=>setSelectedCorrelationStartDate(e.target.value)} style={{...styles.select,minWidth:"180px"}} />
+              </div>
+              <div style={{...styles.filterBox,justifyContent:"flex-end",paddingBottom:"2px"}}>
+                <span style={{...styles.label,opacity:0}}>x</span>
+                <span style={{fontWeight:"700",color:theme.textSub,fontSize:"16px",lineHeight:"48px"}}>→</span>
+              </div>
+              <div style={styles.filterBox}>
+                <span style={styles.label}>Đến ngày</span>
+                <input className="hover-input" type="date" min={MIN_DATE} max={MAX_DATE} value={selectedCorrelationEndDate} onChange={e=>setSelectedCorrelationEndDate(e.target.value)} style={{...styles.select,minWidth:"180px"}} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "24px", marginBottom: "28px" }}>
+              {[
+                {label:"Hệ số Pearson", value:correlationStats.pearson==null?"--":formatNumber(correlationStats.pearson,3)},
+                {label:"Thành phần chủ đạo", value:correlationStats.dominantComponent?? "--"},
+                {label:"Tỷ lệ khí thải độc hại", value:correlationStats.hazardRate==null?"--":formatPercent(correlationStats.hazardRate,1)},
+              ].map(({label,value})=>(
+                <div key={label} className="hover-card" style={{ ...styles.kpiCard, flex: 1, maxWidth: "31%" }}>
+                  <div style={{marginBottom:"8px"}}>
+                    <span style={{...styles.label, color: "#FFFFFF"}}>{label}</span>
+                  </div>
+                  <h3 style={styles.kpiValue}>{value}</h3>
+                </div>
+              ))}
+            </div>
+
+            <div style={{...styles.chartGrid, gridTemplateColumns:"1fr 1fr"}}>
+              <div className="hover-card" style={styles.chartCard}>
+                <div style={styles.chartTitleRow}>
+                  <h3 style={{...styles.chartTitle,marginBottom:0}}>Phân tán &amp; Hồi quy</h3>
+                  <span style={styles.chartBadge}>Scatter</span>
+                </div>
+                <div style={{...styles.chartPlaceholder,minHeight:"450px"}}>
+                  <p className="placeholder-text">Chưa có dữ liệu</p>
+                  <div className="skeleton-line" style={{width:"60%",height:"10px"}}/>
+                  <div className="skeleton-line" style={{width:"40%",height:"10px"}}/>
                 </div>
               </div>
-            </div>
-
-            <div style={styles.kpiGrid(3)}>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Hệ số Tương quan Pearson</span>
-                <h3 style={styles.kpiValue}>
-                  {correlationStats.pearson == null
-                    ? "--"
-                    : formatNumber(correlationStats.pearson, 3)}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Thành phần ô nhiễm chủ đạo</span>
-                <h3 style={styles.kpiValue}>
-                  {correlationStats.dominantComponent ?? "--"}
-                </h3>
-              </div>
-              <div className="hover-card" style={styles.kpiCard}>
-                <span style={styles.label}>Tỷ lệ khí thải độc hại</span>
-                <h3 style={styles.kpiValue}>
-                  {correlationStats.hazardRate == null
-                    ? "--"
-                    : formatPercent(correlationStats.hazardRate, 1)}
-                </h3>
-              </div>
-            </div>
-
-            <div
-              style={{ ...styles.chartGrid, gridTemplateColumns: "1fr 1fr" }}
-            >
               <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>
-                  Biểu đồ Phân tán & Đường Hồi quy
-                </h3>
-                <div
-                  style={{ ...styles.chartPlaceholder, minHeight: "450px" }}
-                ></div>
-              </div>
-              <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>Radar chart</h3>
-                <RadarChart 
+                <div style={styles.chartTitleRow}>
+                  <h3 style={{...styles.chartTitle,marginBottom:0}}>Biểu đồ Radar</h3>
+                  <span style={styles.chartBadge}>Radar</span>
+                </div>
+                <RadarChart
                   rows={correlationRows}
                   selectedY={selectedCorrelationY}
                   yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label ?? selectedCorrelationY}
-                  yThreshold={selectedCorrelationY === "us_aqi" ? 100 : (CORRELATION_X_METRICS[selectedCorrelationY]?.threshold ?? 100)}
+                  yThreshold={selectedCorrelationY==="us_aqi"?100:(CORRELATION_X_METRICS[selectedCorrelationY]?.threshold??100)}
                   allXMetrics={CORRELATION_X_METRICS}
-                  areaLabel={selectedCorrelationProvince || "Toàn quốc"}
+                  areaLabel={selectedCorrelationProvince||"Toàn quốc"}
                 />
               </div>
             </div>
           </>
         )}
+
+        </div>
       </div>
     </div>
   );
