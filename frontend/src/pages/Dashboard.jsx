@@ -5,6 +5,10 @@ import RadarChart from "../components/RadarChart";
 import CalendarHeatmap from "../components/CalendarHeatmap";
 import HorizontalBarChart from "../components/hbar";
 import ScatterPlot from "../components/scatter";
+import AQIDonutChart from "../components/AQIDonutChart";
+import AQIBoxPlot from "../components/AQIBoxPlot";
+import BubbleMap from "../components/BubbleMap";
+import HistogramChart from "../components/HistogramChart";
 
 const MIN_DATE = "2026-04-01";
 const MAX_DATE = "2026-04-30";
@@ -218,6 +222,7 @@ const Dashboard = () => {
     useState("2026-04-01");
   const [selectedOverviewEndDate, setSelectedOverviewEndDate] =
     useState("2026-04-15");
+  const [selectedOverviewHour, setSelectedOverviewHour] = useState("12");
 
   const [selectedTrendProvince, setSelectedTrendProvince] = useState("");
   const [selectedTrendGranularity, setSelectedTrendGranularity] =
@@ -445,23 +450,32 @@ const Dashboard = () => {
     );
     return unique.sort();
   }, [data]);
+  const isOverviewSingleDay =
+    selectedOverviewStartDate === selectedOverviewEndDate;
+  const overviewHourLabel = `${String(selectedOverviewHour).padStart(2, "0")}:00`;
 
   const overviewRows = useMemo(() => {
     if (!data.length) return [];
     const selectedSet = new Set(selectedOverviewProvinces);
     const useAllProvinces = selectedSet.size === 0;
+    const selectedHour = Number(selectedOverviewHour);
 
-    return data.filter(
-      (row) =>
+    return data.filter((row) => {
+      const provinceMatch = useAllProvinces || selectedSet.has(row.province);
+      const dateMatch =
         row.dateKey >= selectedOverviewStartDate &&
-        row.dateKey <= selectedOverviewEndDate &&
-        (useAllProvinces || selectedSet.has(row.province)),
-    );
+        row.dateKey <= selectedOverviewEndDate;
+      const hourMatch = !isOverviewSingleDay || row.hour === selectedHour;
+
+      return provinceMatch && dateMatch && hourMatch;
+    });
   }, [
     data,
     selectedOverviewProvinces,
     selectedOverviewStartDate,
     selectedOverviewEndDate,
+    selectedOverviewHour,
+    isOverviewSingleDay,
   ]);
 
   const overviewMetricThreshold = getMetricThreshold(selectedOverviewMetric);
@@ -582,6 +596,38 @@ const Dashboard = () => {
     };
   }, [trendRows, trendAqiValues]);
 
+  // --- LOGIC CỦA BIỂU ĐỒ TẦN SUẤT ĐÃ ĐƯỢC THÊM LẠI VÀO ĐÂY ---
+  const histogramData = useMemo(() => {
+    if (!trendAqiValues.length) return [];
+    const bins = [
+      { name: "Tốt (0-50)", count: 0, color: "#10B981", min: 0, max: 50 },
+      { name: "TB (51-100)", count: 0, color: "#F59E0B", min: 51, max: 100 },
+      { name: "Kém (101-150)", count: 0, color: "#F97316", min: 101, max: 150 },
+      { name: "Xấu (151-200)", count: 0, color: "#EF4444", min: 151, max: 200 },
+      {
+        name: "Rất xấu (201-300)",
+        count: 0,
+        color: "#8B5CF6",
+        min: 201,
+        max: 300,
+      },
+      {
+        name: "Nguy hại (>300)",
+        count: 0,
+        color: "#7F1D1D",
+        min: 301,
+        max: Infinity,
+      },
+    ];
+
+    trendAqiValues.forEach((val) => {
+      const targetBin = bins.find((b) => val >= b.min && val <= b.max);
+      if (targetBin) targetBin.count += 1;
+    });
+
+    return bins.filter((b) => b.count > 0);
+  }, [trendAqiValues]);
+
   const correlationRows = useMemo(() => {
     if (!data.length) return [];
 
@@ -589,7 +635,6 @@ const Dashboard = () => {
       const provinceMatch =
         !selectedCorrelationProvince ||
         row.province === selectedCorrelationProvince;
-      // Lọc dữ liệu nằm trong khoảng từ ngày bắt đầu đến ngày kết thúc
       const dateMatch =
         row.dateKey >= selectedCorrelationStartDate &&
         row.dateKey <= selectedCorrelationEndDate;
@@ -835,6 +880,55 @@ const Dashboard = () => {
                     style={{ ...styles.select, minWidth: "200px" }}
                   />
                 </div>
+                {isOverviewSingleDay && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "15px",
+                      alignItems: "center",
+                      marginTop: "10px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      <span style={styles.label}>Chọn giờ</span>
+                      <select
+                        className="hover-input"
+                        value={selectedOverviewHour}
+                        onChange={(event) =>
+                          setSelectedOverviewHour(event.target.value)
+                        }
+                        style={{ ...styles.select, minWidth: "180px" }}
+                      >
+                        {Array.from({ length: 24 }, (_, hour) => {
+                          const value = String(hour);
+                          return (
+                            <option key={value} value={value}>
+                              {String(hour).padStart(2, "0")}:00
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        color: theme.textSub,
+                        fontWeight: 600,
+                        marginTop: "24px",
+                      }}
+                    >
+                      Hiển thị theo từng giờ
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -882,16 +976,40 @@ const Dashboard = () => {
             >
               <div
                 className="hover-card"
-                style={{ ...styles.chartCard, gridRow: "span 2" }}
+                style={{
+                  ...styles.chartCard,
+                  gridRow: "span 2",
+                  padding: "10px",
+                }}
               >
-                <h3 style={styles.chartTitle}>Bubble map</h3>
-                <div
-                  style={{ ...styles.chartPlaceholder, minHeight: "680px" }}
-                ></div>
+                <h3
+                  style={{
+                    ...styles.chartTitle,
+                    paddingLeft: "14px",
+                    paddingTop: "14px",
+                  }}
+                >
+                  Bubble map
+                </h3>
+
+                <BubbleMap
+                  overviewRows={overviewRows}
+                  selectedOverviewMetric={selectedOverviewMetric}
+                  overviewMetricThreshold={overviewMetricThreshold}
+                  currentOverviewMetricLabel={currentOverviewMetricLabel}
+                  currentOverviewMetricDecimals={currentOverviewMetricDecimals}
+                />
               </div>
               <div className="hover-card" style={styles.chartCard}>
-                <h3 style={styles.chartTitle}>Donut chart</h3>
-                <div style={styles.chartPlaceholder}></div>
+                <h3 style={styles.chartTitle}>
+                  BIỂU ĐỒ VÀNH KHĂN PHÂN BỐ TRẠNG THÁI
+                </h3>
+
+                <AQIDonutChart
+                  rows={overviewRows}
+                  metric={selectedOverviewMetric}
+                  hourLabel={isOverviewSingleDay ? overviewHourLabel : ""}
+                />
               </div>
               <div className="hover-card" style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>
@@ -1026,7 +1144,6 @@ const Dashboard = () => {
                   granularity={selectedTrendGranularity}
                   threshold={100}
                 />
-
               </div>
               <div
                 style={{
@@ -1035,8 +1152,14 @@ const Dashboard = () => {
                 }}
               >
                 <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Biểu đồ hộp râu ngoại lai</h3>
-                  <div style={styles.chartPlaceholder}></div>
+                  <h3 style={styles.chartTitle}>
+                    Biểu đồ BOXPLOT: Nhận diện Ngoại lai
+                  </h3>
+
+                  <AQIBoxPlot
+                    rows={trendRows}
+                    granularity={selectedTrendGranularity}
+                  />
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>Ma trận Lịch nhiệt</h3>
@@ -1048,7 +1171,8 @@ const Dashboard = () => {
                 </div>
                 <div className="hover-card" style={styles.chartCard}>
                   <h3 style={styles.chartTitle}>Biểu đồ Phân phối Tần suất</h3>
-                  <div style={styles.chartPlaceholder}></div>
+
+                  <HistogramChart histogramData={histogramData} />
                 </div>
               </div>
             </div>
@@ -1202,8 +1326,16 @@ const Dashboard = () => {
                 <RadarChart
                   rows={correlationRows}
                   selectedY={selectedCorrelationY}
-                  yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label ?? selectedCorrelationY}
-                  yThreshold={selectedCorrelationY === "us_aqi" ? 100 : (CORRELATION_X_METRICS[selectedCorrelationY]?.threshold ?? 100)}
+                  yLabel={
+                    CORRELATION_Y_METRICS[selectedCorrelationY]?.label ??
+                    selectedCorrelationY
+                  }
+                  yThreshold={
+                    selectedCorrelationY === "us_aqi"
+                      ? 100
+                      : (CORRELATION_X_METRICS[selectedCorrelationY]
+                        ?.threshold ?? 100)
+                  }
                   allXMetrics={CORRELATION_X_METRICS}
                   areaLabel={selectedCorrelationProvince || "Toàn quốc"}
                 />
