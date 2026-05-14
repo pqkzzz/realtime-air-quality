@@ -255,39 +255,72 @@ const Dashboard = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        // 1. Gọi API lấy toàn bộ dữ liệu từ Database
         const response = await fetch(
           "http://localhost:3000/api/air-quality/all",
         );
-        if (!response.ok) throw new Error("API chưa sẵn sàng hoặc lỗi server");
-
         const result = await response.json();
 
-        if (!cancelled) {
-          // 2. Cập nhật dữ liệu vào state
-          setData(result);
+        if (!cancelled && result.length > 0) {
+          const mappedData = result.map((row) => {
+            // ── Tính dateKey từ datetime (dù backend có trả về hay không) ──
+            const rawDatetime = row.datetime ?? "";
+            const dateKey =
+              row.dateKey ??
+              (rawDatetime.includes("T")
+                ? rawDatetime.slice(0, 10) // ISO: "2026-04-15T08:00:00"
+                : rawDatetime.slice(0, 10)); // Space: "2026-04-15 08:00:00"
+
+            return {
+              ...row,
+              // Đảm bảo các trường bắt buộc luôn có
+              province: row.province ?? "",
+              latitude: Number(row.latitude ?? 0),
+              longitude: Number(row.longitude ?? 0),
+              datetime: rawDatetime,
+              dateKey, // ← FIX CHÍNH
+              hour:
+                row.hour !== undefined
+                  ? Number(row.hour)
+                  : parseInt(
+                      rawDatetime.split(/[ T]/)[1]?.split(":")[0] ?? "0",
+                      10,
+                    ),
+              // Alias CO nếu backend dùng tên khác
+              carbon_monoxide: Number(row.carbon_monoxide ?? row.co ?? 0),
+              nitrogen_dioxide: Number(row.nitrogen_dioxide ?? 0),
+              sulphur_dioxide: Number(row.sulphur_dioxide ?? 0),
+              ozone: Number(row.ozone ?? 0),
+              pm2_5: Number(row.pm2_5 ?? 0),
+              pm10: Number(row.pm10 ?? 0),
+              us_aqi: Number(row.us_aqi ?? 0),
+              european_aqi: Number(row.european_aqi ?? 0),
+            };
+          });
+
+          setData(mappedData);
           setLoadError("");
 
-          // 3. Tự động tìm ngày mới nhất có dữ liệu để hiển thị mặc định
-          if (result.length > 0) {
-            const maxDate = result.reduce(
-              (max, row) => (row.dateKey > max ? row.dateKey : max),
-              result[0].dateKey,
-            );
-            setSelectedOverviewStartDate(maxDate);
-            setSelectedOverviewEndDate(maxDate);
+          // Cập nhật ngày dựa trên data thực tế
+          const dates = mappedData
+            .map((r) => r.dateKey)
+            .filter(Boolean)
+            .sort();
+          const earliest = dates[0];
+          const latest = dates[dates.length - 1];
 
-            // Cập nhật luôn ngày mặc định cho Tab Xu hướng
-            setSelectedTrendDate(maxDate);
-          }
+          setSelectedOverviewStartDate(latest);
+          setSelectedOverviewEndDate(latest);
+          setSelectedTrendDate(latest);
+
+          // Tab 3: dùng TOÀN BỘ khoảng thời gian để có đủ điểm tính Pearson
+          setSelectedCorrelationStartDate(earliest); // ← thêm dòng này
+          setSelectedCorrelationEndDate(latest);
         }
       } catch (error) {
         console.error("Lỗi fetch API:", error);
-        if (!cancelled)
-          setLoadError("Không thể kết nối đến server dữ liệu (localhost:3000)");
+        if (!cancelled) setLoadError("Không thể kết nối đến server dữ liệu");
       }
     };
-
     fetchData();
     return () => {
       cancelled = true;
