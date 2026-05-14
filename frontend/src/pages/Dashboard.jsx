@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useGemini } from '../hooks/useGemini';
 import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
@@ -180,6 +181,7 @@ function linearForecast(values) {
   return Math.max(projected, series[n - 1]);
 }
 
+// --- HÀM HỖ TRỢ LOCAL STORAGE (LƯU CẤU HÌNH MẶC ĐỊNH) ---
 const getSavedState = (key, defaultValue) => {
   const saved = localStorage.getItem(key);
   if (saved !== null) {
@@ -192,630 +194,17 @@ const getSavedState = (key, defaultValue) => {
   return defaultValue;
 };
 
-// =========================================================================
-// KHỐI COMPONENT KPI PREMIUM (ĐÃ CHUYỂN HERO SANG SLATE-800 SÁNG HƠN)
-// =========================================================================
-
-function getAqiMeta(avg) {
-  if (avg == null) return { label: "--", color: "#94A3B8" };
-  if (avg <= 50) return { label: "Tốt", color: "#10B981" };
-  if (avg <= 100) return { label: "Trung bình", color: "#F59E0B" };
-  if (avg <= 150) return { label: "Kém", color: "#F97316" };
-  if (avg <= 200) return { label: "Xấu", color: "#EF4444" };
-  if (avg <= 300) return { label: "Rất xấu", color: "#8B5CF6" };
-  return { label: "Nguy hiểm", color: "#9F1239" };
-}
-
-// Template thẻ KPI
-const KpiCard = ({
-  label,
-  value,
-  unit,
-  status,
-  statusColor,
-  accent = "#3B82F6",
-  icon,
-  progress,
-  description,
-  isHero = false,
-  bgColor = "#ffffff",
-  valueColor = "#0F172A",
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const isDark = bgColor !== "#ffffff";
-
-  // Áp dụng màu nhạt hơn (Slate-800 sang Slate-700) cho Dark theme thay vì đen xì
-  const bgGradient = isDark
-    ? `linear-gradient(135deg, #1E293B 0%, #334155 100%)`
-    : `linear-gradient(135deg, #ffffff 60%, ${accent}08 100%)`;
-
-  const lblColor = isDark ? "#94A3B8" : "#64748B";
-  const iconBg = isDark ? "rgba(255,255,255,0.1)" : `${accent}15`;
-  const iconColor = isDark ? "#ffffff" : accent;
-
-  const isGradient = valueColor.includes("gradient");
-  const valueStyle = {
-    fontSize: isHero ? "30px" : "24px",
-    fontWeight: "900",
-    margin: 0,
-    lineHeight: 1,
-    ...(isGradient
-      ? {
-          backgroundImage: valueColor,
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-          color: "transparent",
-        }
-      : { color: isDark ? "#ffffff" : valueColor }),
-  };
-
-  return (
-    <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        position: "relative",
-        background: bgGradient,
-        borderRadius: "14px",
-        border: isDark ? "1px solid #475569" : "1px solid #E8EDF4", // Viền sáng lên chút cho thẻ tối
-        borderLeft: isDark ? `4px solid ${accent}` : "none",
-        padding: isHero ? "16px 20px" : "14px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "6px",
-        overflow: "hidden",
-        boxShadow: isHovered
-          ? isDark
-            ? `0 8px 20px -4px rgba(0,0,0,0.3)`
-            : `0 8px 20px -4px ${accent}25`
-          : "0 2px 4px -1px rgba(0,0,0,0.05)",
-        transform: isHovered ? "translateY(-3px)" : "translateY(0)",
-        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        cursor: "default",
-        minWidth: 0,
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          right: "-10px",
-          bottom: "-10px",
-          opacity: 0.05,
-          transform: isHovered
-            ? "scale(1.15) rotate(-10deg)"
-            : "scale(1) rotate(0deg)",
-          transition: "transform 0.4s ease",
-          pointerEvents: "none",
-          width: 75,
-          height: 75,
-        }}
-      >
-        {icon &&
-          React.cloneElement(icon, {
-            width: 75,
-            height: 75,
-            color: isDark ? "#ffffff" : accent,
-          })}
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: "700",
-            color: lblColor,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {label}
-        </span>
-        {icon && (
-          <div
-            style={{
-              flexShrink: 0,
-              width: "30px",
-              height: "30px",
-              borderRadius: "8px",
-              background: iconBg,
-              color: iconColor,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {icon}
-          </div>
-        )}
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "6px",
-          position: "relative",
-          zIndex: 1,
-          flexWrap: "wrap",
-        }}
-      >
-        <h3 style={valueStyle}>{value}</h3>
-        {unit && (
-          <span
-            style={{ fontSize: "12px", fontWeight: "600", color: lblColor }}
-          >
-            {unit}
-          </span>
-        )}
-      </div>
-
-      {description && (
-        <div
-          style={{
-            fontSize: "12px",
-            color: lblColor,
-            opacity: 0.8,
-            marginTop: "2px",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {description}
-        </div>
-      )}
-
-      {status && (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "5px",
-            alignSelf: "flex-start",
-            background: isDark ? "rgba(255,255,255,0.1)" : `${statusColor}15`,
-            borderRadius: "16px",
-            padding: "3px 10px",
-            marginTop: "2px",
-            border: `1px solid ${isDark ? "transparent" : statusColor + "30"}`,
-          }}
-        >
-          <span
-            style={{
-              width: "5px",
-              height: "5px",
-              borderRadius: "50%",
-              background: statusColor,
-              boxShadow: `0 0 4px ${statusColor}`,
-            }}
-          />
-          <span
-            style={{
-              fontSize: "11px",
-              fontWeight: "700",
-              color: isDark ? "#ffffff" : statusColor,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {status}
-          </span>
-        </div>
-      )}
-
-      {progress != null && (
-        <div style={{ marginTop: "4px" }}>
-          <div
-            style={{
-              height: "4px",
-              borderRadius: "2px",
-              background: isDark ? "#475569" : "#E2E8F0",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${Math.min(100, Math.max(0, progress))}%`,
-                background: accent,
-                borderRadius: "2px",
-                transition: "width 1s ease",
-              }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// 1. Grid Tổng Quan
-const OverviewKpiGrid = ({
-  overviewStats,
-  currentOverviewMetricDecimals,
-  selectedOverviewMetric,
-}) => {
-  const { label: aqiLabel, color: aqiColor } = getAqiMeta(
-    overviewStats.average,
-  );
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
-        gap: "16px",
-        marginBottom: "24px",
-      }}
-    >
-      <KpiCard
-        isHero
-        label="AQI TRUNG BÌNH KỲ"
-        value={
-          overviewStats.average == null
-            ? "--"
-            : formatNumber(overviewStats.average, currentOverviewMetricDecimals)
-        }
-        status={aqiLabel}
-        statusColor={aqiColor}
-        bgColor="#1E293B" // Thay vì #0F172A (đen)
-        accent="#3B82F6"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0" />
-            <path d="M12 8v4l3 3" />
-          </svg>
-        }
-      />
-      <KpiCard
-        label="CAO NHẤT"
-        value={
-          overviewStats.max == null
-            ? "--"
-            : formatNumber(overviewStats.max, currentOverviewMetricDecimals)
-        }
-        accent="#EF4444"
-        status="Đỉnh ô nhiễm"
-        statusColor="#EF4444"
-        valueColor="linear-gradient(135deg, #FF416C, #FF4B2B)"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-            <polyline points="17 6 23 6 23 12" />
-          </svg>
-        }
-      />
-      <KpiCard
-        label="SỐ TỈNH BÁO ĐỘNG"
-        value={
-          overviewStats.warningProvinces == null
-            ? "--"
-            : overviewStats.warningProvinces
-        }
-        unit="/ 63"
-        accent="#3B82F6"
-        status="Cảnh báo"
-        statusColor="#3B82F6"
-        valueColor="linear-gradient(135deg, #36D1DC, #5B86E5)"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-        }
-      />
-      <KpiCard
-        label="VƯỢT NGƯỠNG WHO"
-        value={
-          overviewStats.exceedPct == null
-            ? "--"
-            : formatPercent(overviewStats.exceedPct, 1)
-        }
-        accent="#8B5CF6"
-        progress={overviewStats.exceedPct ?? 0}
-        valueColor="linear-gradient(135deg, #8E2DE2, #4A00E0)"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-        }
-      />
-    </div>
-  );
-};
-
-// 2. Grid Xu Hướng
-const TrendKpiGrid = ({ trendStats }) => (
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-      gap: "16px",
-      marginBottom: "24px",
-    }}
-  >
-    <div style={{ gridColumn: "span 2" }}>
-      <KpiCard
-        isHero
-        label="TRUNG BÌNH KỲ"
-        value={
-          trendStats.average == null
-            ? "--"
-            : formatNumber(trendStats.average, 0)
-        }
-        unit="AQI"
-        bgColor="#1E293B" // Đã làm sáng hơn
-        accent="#3B82F6"
-        status={
-          trendStats.average != null ? getAqiMeta(trendStats.average).label : ""
-        }
-        statusColor={
-          trendStats.average != null
-            ? getAqiMeta(trendStats.average).color
-            : "#94A3B8"
-        }
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 3v18h18" />
-            <path d="M18 17V9" />
-            <path d="M13 17V5" />
-            <path d="M8 17v-3" />
-          </svg>
-        }
-      />
-    </div>
-    <div style={{ gridColumn: "span 2" }}>
-      <KpiCard
-        isHero
-        label="MỨC ĐỘ BIẾN ĐỘNG"
-        value={formatPercent(trendStats.volatility, 1)}
-        accent="#10B981"
-        status="Dao động"
-        statusColor="#10B981"
-        valueColor="linear-gradient(135deg, #10B981, #059669)"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-          </svg>
-        }
-      />
-    </div>
-    <KpiCard
-      label="NGÀY VƯỢT"
-      value={trendStats.exceedDays ?? "--"}
-      unit="ngày"
-      accent="#EF4444"
-      status={trendStats.exceedDays > 0 ? "Vượt ngưỡng" : "An toàn"}
-      statusColor={trendStats.exceedDays > 0 ? "#EF4444" : "#10B981"}
-      valueColor="linear-gradient(135deg, #FF416C, #FF4B2B)"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-          <line x1="16" y1="2" x2="16" y2="6" />
-          <line x1="8" y1="2" x2="8" y2="6" />
-          <line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-      }
-    />
-    <KpiCard
-      label="CAO / THẤP"
-      value={`${formatNumber(trendStats.max, 0)}`}
-      unit={`/ ${formatNumber(trendStats.min, 0)}`}
-      accent="#3B82F6"
-      description="Max / Min"
-      valueColor="#0F172A"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="7 15 12 20 17 15" />
-          <polyline points="7 9 12 4 17 9" />
-        </svg>
-      }
-    />
-    <KpiCard
-      label="DỰ BÁO ĐỈNH"
-      value={formatNumber(trendStats.forecastPeak, 0)}
-      accent="#D97706"
-      status="Tuyến tính"
-      statusColor="#D97706"
-      valueColor="linear-gradient(135deg, #F2994A, #F2C94C)"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <circle cx="12" cy="12" r="6" />
-          <circle cx="12" cy="12" r="2" />
-        </svg>
-      }
-    />
-    <KpiCard
-      label="GIỜ RỦI RO"
-      value={trendStats.riskHours ?? "--"}
-      unit="giờ"
-      accent="#EF4444"
-      description="AQI ≥ 100"
-      valueColor="linear-gradient(135deg, #BE123C, #EF4444)"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      }
-    />
-  </div>
-);
-
-// 3. Grid Tương Quan
-const CorrelationKpiGrid = ({ correlationStats }) => {
-  const pearson = correlationStats.pearson;
-  const strength =
-    pearson == null
-      ? ""
-      : Math.abs(pearson) >= 0.7
-        ? "Tương quan mạnh"
-        : Math.abs(pearson) >= 0.4
-          ? "Tương quan vừa"
-          : "Tương quan yếu";
-  const strengthColor =
-    pearson == null
-      ? "#94A3B8"
-      : Math.abs(pearson) >= 0.7
-        ? "#3B82F6"
-        : Math.abs(pearson) >= 0.4
-          ? "#3B82F6"
-          : "#EF4444";
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gap: "16px",
-        marginBottom: "24px",
-      }}
-    >
-      <KpiCard
-        isHero
-        label="HỆ SỐ TƯƠNG QUAN PEARSON"
-        value={pearson == null ? "--" : formatNumber(pearson, 3)}
-        bgColor="#1E293B" // Đã làm sáng hơn
-        accent="#3B82F6"
-        status={strength}
-        statusColor={strengthColor}
-        progress={pearson != null ? Math.abs(pearson) * 100 : null}
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-          </svg>
-        }
-      />
-      <KpiCard
-        isHero
-        label="THÀNH PHẦN CHÍNH GÂY Ô NHIỄM"
-        value={correlationStats.dominantComponent ?? "--"}
-        accent="#EA580C"
-        status="Chủ đạo"
-        statusColor="#EA580C"
-        valueColor="linear-gradient(135deg, #F2994A, #F2C94C)"
-        icon={
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
-          </svg>
-        }
-      />
-    </div>
-  );
-};
-// =========================================================================
-
 const Dashboard = () => {
+  // Trạng thái Data
   const [data, setData] = useState([]);
   const [loadError, setLoadError] = useState("");
-
-  // Dữ liệu dự báo từ API
-  const [forecastData, setForecastData] = useState([]);
 
   // Load state từ LocalStorage hoặc gán mặc định
   const [activeTab, setActiveTab] = useState(() =>
     getSavedState("activeTab", "overview"),
   );
 
+  // Tab 1 States
   const [selectedOverviewProvinces, setSelectedOverviewProvinces] = useState(
     () => getSavedState("selectedOverviewProvinces", []),
   );
@@ -828,7 +217,11 @@ const Dashboard = () => {
   const [selectedOverviewEndDate, setSelectedOverviewEndDate] = useState(() =>
     getSavedState("selectedOverviewEndDate", "2026-04-30"),
   );
+  const [selectedOverviewHour, setSelectedOverviewHour] = useState(() =>
+    getSavedState("selectedOverviewHour", "12"),
+  );
 
+  // Tab 2 States
   const [selectedTrendProvince, setSelectedTrendProvince] = useState(() =>
     getSavedState("selectedTrendProvince", ""),
   );
@@ -838,7 +231,12 @@ const Dashboard = () => {
   const [selectedTrendDate, setSelectedTrendDate] = useState(() =>
     getSavedState("selectedTrendDate", "2026-04-15"),
   );
+  // Ngày được chọn tạm thời từ Heatmap (nếu có sẽ ghi đè lên selectedTrendDate)
+  const [heatmapSelectedDate, setHeatmapSelectedDate] = useState("");
 
+  const effectiveTrendDate = heatmapSelectedDate || selectedTrendDate;
+
+  // Tab 3 States
   const [selectedCorrelationY, setSelectedCorrelationY] = useState(() =>
     getSavedState("selectedCorrelationY", "us_aqi"),
   );
@@ -855,38 +253,39 @@ const Dashboard = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const loadDataFromApi = async () => {
+    const loadCsv = async () => {
       try {
-        const response = await fetch("/api/air-quality/all");
-        if (!response.ok) throw new Error("API error: " + response.statusText);
-        const parsed = await response.json();
-        
+        const csvUrls = [
+          "/aqi_vietnam_april2026.csv",
+          "./aqi_vietnam_april2026.csv",
+        ];
+        let response = null;
+        for (const url of csvUrls) {
+          response = await fetch(url);
+          if (response.ok) break;
+          response = null;
+        }
+        if (!response) throw new Error("CSV not found");
+        const text = await response.text();
+        const parsed = parseCsv(text);
         if (!cancelled) {
           setData(parsed);
           setLoadError("");
-        }
-      } catch (error) {
-        if (!cancelled) setLoadError("Không tải được dữ liệu từ API");
-      }
-    };
 
-    const loadForecast = async () => {
-      try {
-        const response = await fetch("/api/air-quality/forecast");
-        if (response.ok) {
-          const res = await response.json();
-          if (!cancelled && res.success) {
-            setForecastData(res.data);
+          // Tìm ngày mới nhất để set mặc định cho Tab Tổng quan
+          if (parsed.length > 0) {
+            const maxDate = parsed.reduce((max, row) =>
+              row.dateKey > max ? row.dateKey : max, parsed[0].dateKey
+            );
+            setSelectedOverviewStartDate(maxDate);
+            setSelectedOverviewEndDate(maxDate);
           }
         }
-      } catch (err) {
-        console.error("Lỗi tải dự báo:", err);
+      } catch (error) {
+        if (!cancelled) setLoadError("Không tải được dữ liệu CSV");
       }
     };
-
-    loadDataFromApi();
-    loadForecast();
-
+    loadCsv();
     return () => {
       cancelled = true;
     };
@@ -923,9 +322,13 @@ const Dashboard = () => {
         "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
       position: "sticky",
       top: 0,
-      zIndex: 100,
+      zIndex: 9999,
     },
-    topbarLogo: { display: "flex", alignItems: "center", gap: "14px" },
+    topbarLogo: {
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+    },
     topbarTitle: {
       fontSize: "18px",
       fontWeight: "800",
@@ -939,8 +342,16 @@ const Dashboard = () => {
       margin: 0,
       letterSpacing: "0.04em",
     },
-    topbarActions: { display: "flex", alignItems: "center", gap: "12px" },
-    body: { display: "flex", flex: 1, minHeight: 0 },
+    topbarActions: {
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+    },
+    body: {
+      display: "flex",
+      flex: 1,
+      minHeight: 0,
+    },
     main: {
       flex: 1,
       display: "flex",
@@ -949,16 +360,11 @@ const Dashboard = () => {
       overflow: "hidden",
       marginLeft: "110px",
     },
-    mainContent: {
-      flex: 1,
-      padding: "30px 40px",
-      overflowY: "auto",
-      minWidth: 0,
-    }, // Thêm minWidth: 0 chặn tràn ngang
+    mainContent: { flex: 1, padding: "20px 40px", overflowY: "auto" },
     filterSection: {
       display: "flex",
       gap: "20px",
-      marginBottom: "30px",
+      marginBottom: "15px",
       flexWrap: "wrap",
       alignItems: "flex-end",
     },
@@ -997,26 +403,48 @@ const Dashboard = () => {
       color: theme.textMain,
       cursor: "pointer",
     },
+    kpiGrid: (cols) => ({
+      display: "grid",
+      gridTemplateColumns: `repeat(${cols}, 1fr)`,
+      gap: "20px",
+      marginBottom: "15px",
+    }),
+    kpiCard: {
+      backgroundColor: theme.card,
+      padding: "16px",
+      borderRadius: "16px",
+      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      border: `1px solid ${theme.border}`,
+    },
+    kpiValue: {
+      fontSize: "28px",
+      fontWeight: "800",
+      color: theme.textMain,
+      margin: 0,
+    },
     chartGrid: { display: "grid", gap: "20px" },
     chartCard: {
       backgroundColor: theme.card,
       borderRadius: "16px",
-      padding: "24px",
+      padding: "16px",
       boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
       border: `1px solid ${theme.border}`,
       display: "flex",
       flexDirection: "column",
-      minWidth: 0,
-    }, // Thêm minWidth 0
+    },
     chartTitle: {
       fontSize: "16px",
       fontWeight: "800",
       color: theme.textMain,
-      marginBottom: "20px",
+      marginBottom: "12px",
       textTransform: "uppercase",
     },
   };
 
+  // Logic dữ liệu
   const provinces = useMemo(
     () =>
       Array.from(new Set(data.map((row) => row.province).filter(Boolean))).sort(
@@ -1070,21 +498,22 @@ const Dashboard = () => {
       ).size,
       exceedPct: values.length
         ? (values.filter((v) => v >= overviewMetricThreshold).length /
-            values.length) *
-          100
+          values.length) *
+        100
         : 0,
     };
   }, [overviewRows, selectedOverviewMetric, overviewMetricThreshold]);
 
   const trendRows = useMemo(() => {
     if (!data.length) return [];
-    const currentDate = parseDateKey(selectedTrendDate);
+
+    const currentDate = parseDateKey(effectiveTrendDate);
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-            getMonday(selectedTrendDate),
-            addDays(getMonday(selectedTrendDate), 6),
-          ]
+          getMonday(effectiveTrendDate),
+          addDays(getMonday(effectiveTrendDate), 6),
+        ]
         : [currentDate, currentDate];
     const sK = formatDateKey(startDate);
     const eK = formatDateKey(endDate);
@@ -1098,7 +527,7 @@ const Dashboard = () => {
     data,
     selectedTrendProvince,
     selectedTrendGranularity,
-    selectedTrendDate,
+    effectiveTrendDate,
   ]);
 
   const trendAqiValues = useMemo(
@@ -1232,30 +661,211 @@ const Dashboard = () => {
       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
     </svg>
   );
+  const IconMenu = () => (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  );
+  // === GEMINI AI ENGINE ===
+  const { generateInsight, loadingAI } = useGemini();
+  const [insightT1, setInsightT1] = useState("");
+  const [insightT2, setInsightT2] = useState("Bấm 'Phân tích' để bắt đầu.");
+  const [insightT3, setInsightT3] = useState("Bấm 'Phân tích' để bắt đầu.");
 
+  // Tự động phân tích Tab 1 khi dữ liệu thay đổi
+  useEffect(() => {
+    if (activeTab === 'overview' && overviewRows.length > 0 && !insightT1 && !loadingAI) {
+      handleCallAI('overview');
+    }
+  }, [activeTab, overviewRows, insightT1, loadingAI]);
+
+  // Reset insight T1 khi filter thay đổi để trigger tự động phân tích lại
+  useEffect(() => {
+    setInsightT1("");
+  }, [selectedOverviewProvinces, selectedOverviewStartDate, selectedOverviewEndDate, selectedOverviewMetric]);
+
+  // Hàm gọi AI chung
+  const handleCallAI = async (tab) => {
+    if (tab === 'overview') {
+      const provinceGroups = {};
+      overviewRows.forEach(row => {
+        if (!provinceGroups[row.province]) provinceGroups[row.province] = { totalAqi: 0, count: 0 };
+        provinceGroups[row.province].totalAqi += row.us_aqi;
+        provinceGroups[row.province].count += 1;
+      });
+      const aggregatedList = Object.keys(provinceGroups).map(prov => ({
+        province: prov,
+        avg_aqi: provinceGroups[prov].totalAqi / provinceGroups[prov].count
+      })).sort((a, b) => b.avg_aqi - a.avg_aqi);
+
+      const payloadT1 = {
+        trung_binh_chung: overviewStats.average?.toFixed(1) || "0",
+        so_tinh_vuot_nguong: overviewStats.warningProvinces || 0,
+        top_3_o_nhiem: aggregatedList.slice(0, 3).map(r => r.province),
+        top_3_trong_lanh: [...aggregatedList].reverse().slice(0, 3).map(r => r.province)
+      };
+      const result = await generateInsight(payloadT1);
+      setInsightT1(result);
+    }
+    else if (tab === 'trend') {
+      const payloadT2 = {
+        average: trendStats.average?.toFixed(1),
+        max: trendStats.max,
+        min: trendStats.min,
+        exceedDays: trendStats.exceedDays,
+        volatility: trendStats.volatility?.toFixed(1) + "%",
+        riskHours: trendStats.riskHours
+      };
+      const result = await generateInsight(payloadT2);
+      setInsightT2(result);
+    }
+    else if (tab === 'correlation') {
+      const payloadT3 = {
+        bien_Y: CORRELATION_Y_METRICS[selectedCorrelationY]?.label,
+        bien_X: CORRELATION_X_METRICS[selectedCorrelationX]?.label,
+        he_so_Pearson: correlationStats.pearson?.toFixed(2),
+        thanh_phan_chu_dao: correlationStats.dominantComponent
+      };
+      const result = await generateInsight(payloadT3);
+      setInsightT3(result);
+    }
+  };
+  // ==========================
   return (
     <div style={styles.app}>
       <style>
         {`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-          .sidebar-rail { width: 80px; height: auto; max-height: 80vh; background: rgba(17, 28, 68, 0.9) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 35px; position: fixed; left: 20px; top: 50%; transform: translateY(-50%); z-index: 1000; display: flex; flex-direction: column; padding: 25px 0; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important; overflow: hidden; }
-          .sidebar-rail:hover { width: 260px; border-radius: 25px; }
-          .nav-rail-btn { width: 54px; height: 54px; border-radius: 18px; border: none; background: transparent; color: #94A3B8; display: flex; align-items: center; justify-content: flex-start; padding-left: 17px; cursor: pointer; transition: all 0.3s; position: relative; margin: 8px auto; flex-shrink: 0; overflow: hidden; white-space: nowrap; }
-          .sidebar-rail:hover .nav-rail-btn { width: 220px; justify-content: flex-start; padding: 0 20px; margin: 6px 20px; }
-          .nav-rail-btn.active { background: #4318FF; color: #FFFFFF; box-shadow: 0 10px 20px rgba(67, 24, 255, 0.3); }
-          .nav-rail-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.1); color: #FFFFFF; }
-          .nav-rail-label { opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateX(-10px); margin-left: 15px; font-weight: 600; font-size: 14px; pointer-events: none; }
-          .sidebar-rail:hover .nav-rail-label { opacity: 1; transform: translateX(0); transition-delay: 0.1s; pointer-events: auto; }
-          .nav-rail-icon { font-size: 20px; flex-shrink: 0; transition: transform 0.3s; display: flex; align-items: center; justify-content: center; }
-          .sidebar-rail:hover .nav-rail-icon { transform: scale(1.1); }
-          .topbar-pill-btn { display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #FFFFFF; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; }
-          .topbar-pill-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
-          .insight-box { background: #F8FAFC; border: 1px dashed #3B82F6; border-radius: 16px; padding: 20px; marginBottom: 30px; color: #64748B; font-size: 14px; }
-          
-          /* Animation load trang cho KPI */
-          @keyframes kpiMount {
-            from { opacity: 0; transform: translateY(15px); }
-            to   { opacity: 1; transform: translateY(0); }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          .sidebar-rail {
+            width: 80px;
+            height: auto;
+            max-height: 80vh;
+            background: rgba(17, 28, 68, 0.9) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 35px;
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            padding: 25px 0;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            overflow: hidden;
+          }
+          .sidebar-rail:hover {
+            width: 260px;
+            border-radius: 25px;
+          }
+          .nav-rail-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            border: none;
+            background: transparent;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 17px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            margin: 8px auto;
+            flex-shrink: 0;
+            overflow: hidden;
+            white-space: nowrap;
+          }
+          .sidebar-rail:hover .nav-rail-btn {
+            width: 220px;
+            justify-content: flex-start;
+            padding: 0 20px;
+            margin: 6px 20px;
+          }
+          .nav-rail-btn.active {
+            background: #4318FF;
+            color: #FFFFFF;
+            box-shadow: 0 10px 20px rgba(67, 24, 255, 0.3);
+          }
+          .nav-rail-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+          }
+          .nav-rail-label {
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateX(-10px);
+            margin-left: 15px;
+            font-weight: 600;
+            font-size: 14px;
+            pointer-events: none;
+          }
+          .sidebar-rail:hover .nav-rail-label {
+            opacity: 1;
+            transform: translateX(0);
+            transition-delay: 0.1s;
+            pointer-events: auto;
+          }
+          .nav-rail-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .sidebar-rail:hover .nav-rail-icon {
+            transform: scale(1.1);
+          }
+          .topbar-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 18px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
+          }
+          .topbar-btn:hover { background: rgba(255,255,255,0.2); }
+          .topbar-pill-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .topbar-pill-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.4);
+          }
+          .insight-box {
+            background: #F8FAFC; border: 1px dashed #3B82F6; border-radius: 16px;
+            padding: 20px; marginBottom: 30px; color: #64748B; font-size: 14px;
           }
         `}
       </style>
@@ -1355,34 +965,165 @@ const Dashboard = () => {
             {/* ================= TAB 1: OVERVIEW ================= */}
             {activeTab === "overview" && (
               <>
-                <OverviewKpiGrid
-                  overviewStats={overviewStats}
-                  currentOverviewMetricDecimals={currentOverviewMetricDecimals}
-                  selectedOverviewMetric={selectedOverviewMetric}
-                />
-
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
+                    gap: "20px",
+                    marginBottom: "30px",
+                  }}
+                >
+                  {(() => {
+                    const avg = overviewStats.average;
+                    let sLabel = "--";
+                    let sColor = "#333";
+                    if (avg != null) {
+                      if (avg <= 50) {
+                        sLabel = "Tốt";
+                        sColor = "#00C853";
+                      } else if (avg <= 100) {
+                        sLabel = "Vừa";
+                        sColor = "#FFD600";
+                      } else if (avg <= 150) {
+                        sLabel = "Nhạy cảm";
+                        sColor = "#E54B4B";
+                      } else if (avg <= 200) {
+                        sLabel = "Xấu";
+                        sColor = "#D50000";
+                      } else {
+                        sLabel = "Rất xấu";
+                        sColor = "#B71C1C";
+                      }
+                    }
+                    return (
+                      <div
+                        className="hover-card"
+                        style={{
+                          ...styles.kpiCard,
+                          borderLeft: `4px solid ${sColor}`,
+                          padding: "16px 20px",
+                        }}
+                      >
+                        <span style={{ ...styles.label, fontSize: "12px" }}>
+                          AQI TRUNG BÌNH
+                        </span>
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            color: sColor,
+                            fontSize: "32px",
+                            marginTop: "4px",
+                            lineHeight: "1",
+                          }}
+                        >
+                          {avg == null
+                            ? "--"
+                            : formatNumber(avg, currentOverviewMetricDecimals)}
+                        </h3>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: sColor,
+                            marginTop: "6px",
+                          }}
+                        >
+                          {sLabel}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div
+                    className="hover-card"
                     style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
+                      ...styles.kpiCard,
+                      justifyContent: "center",
+                      padding: "16px 20px",
                     }}
                   >
-                    💡 INSIGHT TỔNG QUAN
+                    <span style={{ ...styles.label, fontSize: "12px" }}>
+                      CAO NHẤT
+                    </span>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "24px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {overviewStats.max == null
+                        ? "--"
+                        : formatNumber(
+                          overviewStats.max,
+                          currentOverviewMetricDecimals,
+                        )}
+                    </h3>
+                  </div>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      justifyContent: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <span style={{ ...styles.label, fontSize: "12px" }}>
+                      SỐ TỈNH
+                    </span>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "24px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {overviewStats.warningProvinces == null
+                        ? "--"
+                        : overviewStats.warningProvinces}
+                    </h3>
+                  </div>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      justifyContent: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <span style={{ ...styles.label, fontSize: "12px" }}>
+                      VƯỢT WHO
+                    </span>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "24px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {overviewStats.exceedPct == null
+                        ? "--"
+                        : formatPercent(overviewStats.exceedPct, 1)}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* [CHỖ CHÈN INSIGHT TAB 1] */}
+                {/* INSIGHT TAB 1 */}
+                <div className="insight-box" style={{ marginBottom: "15px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '16px' }}>
+                  <h4 style={{ margin: "0 0 12px 0", color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                    <span style={{ fontSize: '16px' }}>✨</span> AI INSIGHT TỔNG QUAN
+                    {loadingAI && <span style={{ fontSize: '12px', color: '#3B82F6', fontWeight: 'bold' }}> (Đang phân tích...)</span>}
                   </h4>
-                  <p style={{ margin: 0 }}>
-                    Dữ liệu ghi nhận mức độ ô nhiễm trung bình toàn quốc trong
-                    tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao
-                    hơn...
-                  </p>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '13px', lineHeight: '1.5' }}>
+                    {insightT1 || "Đang quét dữ liệu..."}
+                  </pre>
                 </div>
 
                 <div
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1.3fr 1fr",
-                    gap: "25px",
+                    gap: "15px",
                   }}
                 >
                   <div
@@ -1409,23 +1150,23 @@ const Dashboard = () => {
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Top 8 Ô nhiễm nhất</h3>
+                    <h3 style={styles.chartTitle}>Top 5 Ô nhiễm nhất</h3>
                     <HorizontalBarChart
                       rows={overviewRows}
                       metricKey={selectedOverviewMetric}
                       metricLabel={currentOverviewMetricLabel}
-                      topN={8}
+                      topN={5}
                       order="desc"
                       barColor="#EF4444"
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Top 8 Trong lành nhất</h3>
+                    <h3 style={styles.chartTitle}>Top 5 Trong lành nhất</h3>
                     <HorizontalBarChart
                       rows={overviewRows}
                       metricKey={selectedOverviewMetric}
                       metricLabel={currentOverviewMetricLabel}
-                      topN={8}
+                      topN={5}
                       order="asc"
                       barColor="#10B981"
                     />
@@ -1489,22 +1230,264 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <TrendKpiGrid trendStats={trendStats} />
+                <div style={styles.kpiGrid(6)}>
+                  {/* Metric 1: TB Kỳ */}
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>TB KỲ</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "22px", marginTop: "8px" }}>
+                      {trendStats.average == null
+                        ? "--"
+                        : formatNumber(trendStats.average, 0)}
+                    </h3>
+                  </div>
 
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
+                  {/* Metric 2: Ngày vượt */}
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>NGÀY VƯỢT</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "22px", marginTop: "8px" }}>
+                      {trendStats.exceedDays}
+                    </h3>
+                  </div>
+
+                  {/* Metric 3: Biến động */}
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>BIẾN ĐỘNG</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "22px", marginTop: "8px" }}>
+                      {formatPercent(trendStats.volatility, 1)}
+                    </h3>
+                  </div>
+
+                  {/* Metric 4: CAO / THẤP (Premium) */}
+                  <div
+                    className="hover-card"
                     style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
                     }}
                   >
-                    💡 INSIGHT BIẾN ĐỘNG
-                  </h4>
-                  <p style={{ margin: 0 }}>
-                    Xu hướng chỉ số có dấu hiệu tăng mạnh vào các khung giờ cao
-                    điểm (7h-9h). Dự báo trong 24h tới...
-                  </p>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        CAO / THẤP
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#F1F5F9",
+                          borderRadius: "8px",
+                          color: "#64748B",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="7 15 12 20 17 15" />
+                          <polyline points="7 9 12 4 17 9" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "6px",
+                        marginTop: "8px",
+                      }}
+                    >
+                      <h3 style={{ ...styles.kpiValue, fontSize: "22px" }}>
+                        {formatNumber(trendStats.max, 0)}
+                      </h3>
+                      <span
+                        style={{
+                          color: "#94A3B8",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        / {formatNumber(trendStats.min, 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metric 5: Dự báo đỉnh (Premium) */}
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        DỰ BÁO ĐỈNH
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#FFFBEB",
+                          borderRadius: "8px",
+                          color: "#D97706",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <circle cx="12" cy="12" r="6" />
+                          <circle cx="12" cy="12" r="2" />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "22px",
+                        marginTop: "8px",
+                      }}
+                    >
+                      {formatNumber(trendStats.forecastPeak, 0)}
+                    </h3>
+                  </div>
+
+                  {/* Metric 6: Giờ rủi ro (Premium) */}
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        GIỜ RỦI RO
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#F3E8FF",
+                          borderRadius: "8px",
+                          color: "#9333EA",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "22px",
+                        marginTop: "8px",
+                      }}
+                    >
+                      {trendStats.riskHours}
+                    </h3>
+                  </div>
+                </div>
+                {/* [CHỖ CHÈN INSIGHT TAB 2] */}
+                {/* INSIGHT TAB 2 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT XU HƯỚNG
+                    </h4>
+                    <button onClick={() => handleCallAI('trend')} disabled={loadingAI} style={{ padding: '8px 16px', background: loadingAI ? '#94A3B8' : '#0F172A', color: '#fff', border: 'none', borderRadius: '8px', cursor: loadingAI ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                      {loadingAI ? "Đang quét..." : "Phân tích xu hướng"}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT2}
+                  </pre>
                 </div>
 
                 <div style={styles.chartGrid}>
@@ -1537,8 +1520,10 @@ const Dashboard = () => {
                     <div className="hover-card" style={styles.chartCard}>
                       <h3 style={styles.chartTitle}>Ma trận nhiệt độ</h3>
                       <CalendarHeatmap
-                        data={trendRows}
+                        data={data}
                         province={selectedTrendProvince}
+                        selectedDate={effectiveTrendDate}
+                        onDateSelect={setHeatmapSelectedDate}
                         isCompact={true}
                       />
                     </div>
@@ -1601,22 +1586,201 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <CorrelationKpiGrid correlationStats={correlationStats} />
-
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "20px",
+                    marginBottom: "30px",
+                  }}
+                >
+                  {/* Hero Metric 1: Pearson */}
+                  <div
+                    className="hover-card"
                     style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
+                      ...styles.kpiCard,
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: "16px 20px",
                     }}
                   >
-                    💡 INSIGHT TƯƠNG QUAN
-                  </h4>
-                  <p style={{ margin: 0 }}>
-                    Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và
-                    AQI tại các khu vực đô thị lớn...
-                  </p>
+                    <div style={{ flex: 1 }}>
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "12px",
+                          color: "#64748B",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Hệ số tương quan Pearson
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "12px",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            fontSize: "36px",
+                            lineHeight: "1",
+                            color: "#0F172A",
+                          }}
+                        >
+                          {correlationStats.pearson == null
+                            ? "--"
+                            : formatNumber(correlationStats.pearson, 3)}
+                        </h3>
+                        {correlationStats.pearson != null && (
+                          <span
+                            style={{
+                              padding: "3px 8px",
+                              borderRadius: "10px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              backgroundColor: "#EFF6FF",
+                              color: "#2563EB",
+                            }}
+                          >
+                            R² Score
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "14px",
+                        background: "#EFF6FF",
+                        color: "#3B82F6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="12" r="3" />
+                        <circle cx="18" cy="19" r="3" />
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Hero Metric 2: Thành phần chính */}
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "12px",
+                          color: "#64748B",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Thành phần chính gây ô nhiễm
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "12px",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            fontSize: "36px",
+                            lineHeight: "1",
+                            color: "#0F172A",
+                          }}
+                        >
+                          {correlationStats.dominantComponent ?? "--"}
+                        </h3>
+                        {correlationStats.dominantComponent && (
+                          <span
+                            style={{
+                              padding: "3px 8px",
+                              borderRadius: "10px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              backgroundColor: "#FFF7ED",
+                              color: "#EA580C",
+                            }}
+                          >
+                            Chủ đạo
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "14px",
+                        background: "#FFF7ED",
+                        color: "#F97316",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* [CHỖ CHÈN INSIGHT TAB 3] */}
+                {/* INSIGHT TAB 3 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT TƯƠNG QUAN
+                    </h4>
+                    <button onClick={() => handleCallAI('correlation')} disabled={loadingAI} style={{ padding: '8px 16px', background: loadingAI ? '#94A3B8' : '#0F172A', color: '#fff', border: 'none', borderRadius: '8px', cursor: loadingAI ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                      {loadingAI ? "Đang quét..." : "Phân tích tương quan"}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT3}
+                  </pre>
                 </div>
 
                 <div
