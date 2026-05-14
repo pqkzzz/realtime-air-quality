@@ -7,17 +7,46 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
-// QUAN TRỌNG: Đảm bảo dòng này luôn ở trên cùng
 import "leaflet/dist/leaflet.css";
 
-// ── Bảng màu chuẩn VN_AQI (6 Cấp độ) ──────────────────────────
+// ── Bảng màu chuẩn VN_AQI & CÂU NHẮC NHỞ TƯƠNG ỨNG ──────────────────────────
 const AQI_LEVELS = [
-  { label: "Tốt", fill: "#34D399", glow: "#059669" },
-  { label: "Trung bình", fill: "#FCD34D", glow: "#D97706" },
-  { label: "Kém", fill: "#FB923C", glow: "#C2410C" },
-  { label: "Xấu", fill: "#F87171", glow: "#B91C1C" },
-  { label: "Rất xấu", fill: "#C084FC", glow: "#7C3AED" },
-  { label: "Nguy hại", fill: "#FB7185", glow: "#9F1239" },
+  {
+    label: "Tốt",
+    fill: "#34D399",
+    glow: "#059669",
+    message: "Trời trong lành, tận hưởng hoạt động ngoài trời thôi!",
+  },
+  {
+    label: "Trung bình",
+    fill: "#FCD34D",
+    glow: "#D97706",
+    message: "Chất lượng không khí chấp nhận được.",
+  },
+  {
+    label: "Kém",
+    fill: "#FB923C",
+    glow: "#C2410C",
+    message: "Nhóm nhạy cảm (trẻ em, người già) nên hạn chế ra ngoài.",
+  },
+  {
+    label: "Xấu",
+    fill: "#F87171",
+    glow: "#B91C1C",
+    message: "Bắt đầu ô nhiễm. Nhớ mang khẩu trang khi ra đường nhé!",
+  },
+  {
+    label: "Rất xấu",
+    fill: "#C084FC",
+    glow: "#7C3AED",
+    message: "Ô nhiễm nặng! Hạn chế tối đa việc mở cửa sổ và ra ngoài.",
+  },
+  {
+    label: "Nguy hại",
+    fill: "#FB7185",
+    glow: "#9F1239",
+    message: "🚨 Cảnh báo khẩn cấp: Mọi người nên ở yên trong nhà!",
+  },
 ];
 
 function getLevel(ratio) {
@@ -106,14 +135,13 @@ const Legend = () => (
   </div>
 );
 
-// --- Component Chính ---
 const BubbleMap = ({
   overviewRows,
   selectedOverviewMetric,
   overviewMetricThreshold,
   currentOverviewMetricLabel,
   currentOverviewMetricDecimals,
-  insightText, // Nhận thêm prop insightText để truyền từ Dashboard xuống (nếu có)
+  insightText,
 }) => {
   const [currentZoom, setCurrentZoom] = useState(5.5);
   const handleZoomChange = useCallback((z) => setCurrentZoom(z), []);
@@ -137,7 +165,6 @@ const BubbleMap = ({
     }));
   }, [overviewRows, selectedOverviewMetric]);
 
-  // Nội dung Insight mặc định nếu không truyền từ ngoài vào
   const finalInsightText =
     insightText ||
     "Dựa trên dữ liệu quan trắc, phần lớn các khu vực đang hiển thị mức độ ô nhiễm dao động. Các điểm chấm đỏ (Xấu) và tím (Rất Xấu) tập trung nhiều ở khu vực trung tâm và khu công nghiệp. Cần chú ý theo dõi.";
@@ -186,8 +213,11 @@ const BubbleMap = ({
           {aggregatedData.map((row, idx) => {
             const val = row.displayVal;
             const ratio = val / overviewMetricThreshold;
+
             const levelIndex = getLevel(ratio);
-            const { fill, glow, label } = AQI_LEVELS[levelIndex];
+            // Kéo thêm tham số message ra để xài
+            const { fill, glow, label, message } = AQI_LEVELS[levelIndex];
+
             const base = val / (selectedOverviewMetric === "us_aqi" ? 10 : 4);
             const factor = Math.pow(currentZoom / 5.5, 1.5);
             const radius = Math.max(3, Math.min(25, base * factor));
@@ -218,10 +248,12 @@ const BubbleMap = ({
                       border: `1px solid ${glow}66`,
                       borderRadius: 12,
                       padding: "12px",
-                      minWidth: 140,
+                      minWidth: 160, // Nới rộng hộp một chút để chứa đoạn text thoải mái hơn
+                      maxWidth: 200,
                       textAlign: "center",
                       boxShadow: `0 8px 24px rgba(0,0,0,0.12), 0 0 10px ${fill}22`,
                       fontFamily: "'Inter', sans-serif",
+                      whiteSpace: "normal", // Ép text được tự động xuống dòng nếu quá dài
                     }}
                   >
                     <div
@@ -274,6 +306,21 @@ const BubbleMap = ({
                     >
                       {label}
                     </div>
+
+                    {/* KHU VỰC CHÈN LỜI NHẮC NHỞ */}
+                    <div
+                      style={{
+                        marginTop: 10,
+                        fontSize: 11,
+                        color: "#475569",
+                        fontWeight: 500,
+                        lineHeight: 1.4,
+                        borderTop: `1px dashed #E2E8F0`, // Có 1 vạch đứt phân cách nhẹ
+                        paddingTop: 8,
+                      }}
+                    >
+                      {message}
+                    </div>
                   </div>
                 </LeafletTooltip>
               </CircleMarker>
@@ -281,10 +328,8 @@ const BubbleMap = ({
           })}
         </MapContainer>
 
-        {/* ── Bảng Chú Giải góc TRÊN PHẢI ── */}
         <Legend />
 
-        {/* ── Hộp Insight lơ lửng góc DƯỚI TRÁI ── */}
         <div
           style={{
             position: "absolute",
@@ -293,12 +338,12 @@ const BubbleMap = ({
             zIndex: 1000,
             background: "rgba(255, 255, 255, 0.92)",
             backdropFilter: "blur(12px)",
-            border: "1px solid rgba(59, 130, 246, 0.3)", // Viền xanh blue để nhấn mạnh
+            border: "1px solid rgba(59, 130, 246, 0.3)",
             borderRadius: 12,
             padding: "16px",
-            maxWidth: "280px", // Hộp nhỏ gọn không che bản đồ
+            maxWidth: "280px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-            pointerEvents: "auto", // Cho phép bôi đen text nếu muốn
+            pointerEvents: "auto",
           }}
         >
           <div
@@ -340,4 +385,4 @@ const BubbleMap = ({
   );
 };
 
-export default BubbleMap;
+export default React.memo(BubbleMap);
