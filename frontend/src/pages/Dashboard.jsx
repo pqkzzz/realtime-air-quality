@@ -194,8 +194,7 @@ const getSavedState = (key, defaultValue) => {
 };
 
 const Dashboard = () => {
-  // Trạng thái Sidebar và Data
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Trạng thái Data
   const [data, setData] = useState([]);
   const [loadError, setLoadError] = useState("");
 
@@ -337,6 +336,7 @@ const Dashboard = () => {
       flexDirection: "column",
       height: "100vh",
       overflow: "hidden",
+      marginLeft: "110px",
     },
     mainContent: { flex: 1, padding: "30px 40px", overflowY: "auto" },
     filterSection: {
@@ -658,23 +658,91 @@ const Dashboard = () => {
       <style>
         {`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-          .sidebar-container { 
-            width: ${isSidebarCollapsed ? "85px" : "280px"}; 
-            background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%); 
-            display: flex; flex-direction: column; padding: 25px 0; 
-            box-shadow: 4px 0 20px rgba(0,0,0,0.15); z-index: 10; 
-            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden; white-space: nowrap;
+          .sidebar-rail {
+            width: 80px;
+            height: auto;
+            max-height: 80vh;
+            background: rgba(17, 28, 68, 0.9) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 35px;
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            padding: 25px 0;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            overflow: hidden;
           }
-          .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; padding: 0 12px; }
-          .nav-item { 
-            padding: 14px ${isSidebarCollapsed ? "0" : "16px"}; border-radius: 12px; cursor: pointer; 
-            display: flex; align-items: center; gap: 16px; color: #94A3B8; font-weight: 600; 
-            transition: all 0.25s; justify-content: ${isSidebarCollapsed ? "center" : "flex-start"};
+          .sidebar-rail:hover {
+            width: 260px;
+            border-radius: 25px;
           }
-          .nav-item.active { background-color: rgba(59, 130, 246, 0.15); color: #FFFFFF; box-shadow: inset 4px 0 0 0 #3B82F6; }
-          .nav-text { display: ${isSidebarCollapsed ? "none" : "block"}; font-size: 15px; }
-          .nav-item:hover { background-color: rgba(255, 255, 255, 0.1); color: #FFF; }
+          .nav-rail-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            border: none;
+            background: transparent;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 17px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            margin: 8px auto;
+            flex-shrink: 0;
+            overflow: hidden;
+            white-space: nowrap;
+          }
+          .sidebar-rail:hover .nav-rail-btn {
+            width: 220px;
+            justify-content: flex-start;
+            padding: 0 20px;
+            margin: 6px 20px;
+          }
+          .nav-rail-btn.active {
+            background: #4318FF;
+            color: #FFFFFF;
+            box-shadow: 0 10px 20px rgba(67, 24, 255, 0.3);
+          }
+          .nav-rail-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+          }
+          .nav-rail-label {
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateX(-10px);
+            margin-left: 15px;
+            font-weight: 600;
+            font-size: 14px;
+            pointer-events: none;
+          }
+          .sidebar-rail:hover .nav-rail-label {
+            opacity: 1;
+            transform: translateX(0);
+            transition-delay: 0.1s;
+            pointer-events: auto;
+          }
+          .nav-rail-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .sidebar-rail:hover .nav-rail-icon {
+            transform: scale(1.1);
+          }
           .top-header {
             height: 70px; background: #FFF; border-bottom: 1px solid #E2E8F0;
             display: flex; align-items: center; justify-content: space-between;
@@ -693,80 +761,29 @@ const Dashboard = () => {
         `}
       </style>
 
-      {/* --- SIDEBAR --- */}
-      <div className="sidebar-container">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "15px",
-            marginBottom: "45px",
-            padding: "0 22px",
-          }}
-        >
-          <img
-            src="https://api.dicebear.com/7.x/bottts/svg?seed=AQI_SYSTEM&backgroundColor=3B82F6"
-            alt="Logo"
-            style={{ width: 40, height: 40, borderRadius: 12 }}
-          />
-          {!isSidebarCollapsed && (
-            <h1
-              style={{
-                fontSize: "20px",
-                fontWeight: "900",
-                margin: 0,
-                color: "#FFFFFF",
-                letterSpacing: "1px",
-              }}
-            >
-              AQI PRO
-            </h1>
-          )}
-        </div>
-        <div className="nav-menu">
-          <div
-            className={
-              activeTab === "overview" ? "nav-item active" : "nav-item"
-            }
-            onClick={() => setActiveTab("overview")}
+      {/* NAVIGATION RAIL */}
+      <div className="sidebar-rail">
+        {[
+          { tab: "overview", label: "Tổng quan", icon: <IconOverview /> },
+          { tab: "trend", label: "Xu hướng", icon: <IconTrend /> },
+          { tab: "correlation", label: "Tương quan", icon: <IconCorrelation /> },
+        ].map(({ tab, label, icon }) => (
+          <button
+            key={tab}
+            className={`nav-rail-btn${activeTab === tab ? " active" : ""}`}
+            onClick={() => setActiveTab(tab)}
+            title={label}
           >
-            <IconOverview />
-            <span className="nav-text">Tổng quan</span>
-          </div>
-          <div
-            className={activeTab === "trend" ? "nav-item active" : "nav-item"}
-            onClick={() => setActiveTab("trend")}
-          >
-            <IconTrend />
-            <span className="nav-text">Xu hướng</span>
-          </div>
-          <div
-            className={
-              activeTab === "correlation" ? "nav-item active" : "nav-item"
-            }
-            onClick={() => setActiveTab("correlation")}
-          >
-            <IconCorrelation />
-            <span className="nav-text">Tương quan</span>
-          </div>
-        </div>
+            <span className="nav-rail-icon">{icon}</span>
+            <span className="nav-rail-label">{label}</span>
+          </button>
+        ))}
       </div>
 
       {/* --- MAIN AREA --- */}
       <div style={styles.main}>
         <div className="top-header">
           <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
-            <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                color: "#0F172A",
-              }}
-            >
-              <IconMenu />
-            </button>
             <h2
               style={{
                 margin: 0,
