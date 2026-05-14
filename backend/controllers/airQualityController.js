@@ -49,24 +49,32 @@ exports.getAllData = async (req, res) => {
       .select("*")
       .orderBy("measured_at", "asc");
 
-    const formatted = fullData.map((row) => ({
-      province: row.station_name,
-      latitude: parseFloat(row.lat),
-      longitude: parseFloat(row.lon),
-      datetime: new Date(row.measured_at)
-        .toISOString()
-        .replace("T", " ")
-        .replace(".000Z", ""),
-      dateKey: new Date(row.measured_at).toISOString().split("T")[0],
-      pm2_5: row.pm2_5,
-      pm10: row.pm10,
-      carbon_monoxide: row.co,
-      nitrogen_dioxide: row.no2,
-      sulphur_dioxide: row.so2,
-      ozone: row.o3,
-      us_aqi: row.aqi,
-      european_aqi: row.european_aqi || row.aqi,
-    }));
+    const formatted = fullData.map((row) => {
+      // Chuyển đổi timestamp sang đối tượng Date
+      const d = new Date(row.measured_at);
+
+      // SỬA TẠI ĐÂY: Dùng định dạng của Thụy Điển (sv-SE) để lấy yyyy-mm-dd hh:mm:ss
+      // và chỉ định múi giờ là Asia/Ho_Chi_Minh
+      const vnTimeStr = d.toLocaleString("sv-SE", {
+        timeZone: "Asia/Ho_Chi_Minh",
+      });
+
+      return {
+        province: row.station_name,
+        latitude: parseFloat(row.lat),
+        longitude: parseFloat(row.lon),
+        datetime: vnTimeStr, // Kết quả: "2026-04-01 00:00:00"
+        dateKey: vnTimeStr.split(" ")[0], // Kết quả: "2026-04-01"
+        pm2_5: row.pm2_5,
+        pm10: row.pm10,
+        carbon_monoxide: row.co,
+        nitrogen_dioxide: row.no2,
+        sulphur_dioxide: row.so2,
+        ozone: row.o3,
+        us_aqi: row.aqi,
+        european_aqi: row.european_aqi || row.aqi,
+      };
+    });
 
     return res.json(formatted);
   } catch (err) {
@@ -109,11 +117,7 @@ exports.getTimeSeries = async (req, res) => {
         lon: station.lon,
         pollutant,
         unit:
-          pollutant === "aqi"
-            ? "AQI"
-            : pollutant === "co"
-              ? "mg/m³"
-              : "µg/m³",
+          pollutant === "aqi" ? "AQI" : pollutant === "co" ? "mg/m³" : "µg/m³",
         data: [],
       };
     });
@@ -179,7 +183,7 @@ exports.getGrouped = async (req, res) => {
       groups = dbResult.map((g) => {
         const districtName = g.district;
         const stationsInGroup = STATIONS.filter(
-          (s) => s.district === districtName
+          (s) => s.district === districtName,
         ).map((s) => s.id);
         return {
           id: districtName,
@@ -241,7 +245,7 @@ exports.getGrouped = async (req, res) => {
             station.name,
             station.district,
             values,
-            pollutant
+            pollutant,
           );
         });
       } else if (groupBy === "aqi_category") {
@@ -329,13 +333,14 @@ exports.getLatest = async (req, res) => {
       };
     });
 
-    const aqiValues = stations
-      .map((s) => s.aqi)
-      .filter((a) => a != null);
+    const aqiValues = stations.map((s) => s.aqi).filter((a) => a != null);
     const cityAqi = aqiValues.length
       ? Math.round(aqiValues.reduce((a, b) => a + b, 0) / aqiValues.length)
       : null;
-    const cityCategory = cityAqi != null ? getAqiCategory(cityAqi) : { label: "Unknown", color: "", description: "" };
+    const cityCategory =
+      cityAqi != null
+        ? getAqiCategory(cityAqi)
+        : { label: "Unknown", color: "", description: "" };
 
     return res.json({
       success: true,
@@ -435,7 +440,7 @@ function buildGroup(id, label, district, values, pollutant) {
     };
   }
   const avg = parseFloat(
-    (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
+    (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1),
   );
   const min = parseFloat(Math.min(...values).toFixed(1));
   const max = parseFloat(Math.max(...values).toFixed(1));

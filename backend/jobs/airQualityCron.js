@@ -130,28 +130,15 @@ async function runCleanupJob() {
 // Đăng ký cron schedules
 // ─────────────────────────────────────────────
 function startCronJobs() {
-  // Mỗi 1 giờ (vào phút thứ 5 để tránh tranh chấp với các service khác)
-  cron.schedule("5 * * * *", runFetchJob, {
-    timezone: "Asia/Ho_Chi_Minh",
-  });
+  // 1. Giữ nguyên các lịch trình cũ
+  cron.schedule("5 * * * *", runFetchJob, { timezone: "Asia/Ho_Chi_Minh" });
+  cron.schedule("0 2 * * *", runCleanupJob, { timezone: "Asia/Ho_Chi_Minh" });
+  cron.schedule("0 8 * * *", runForecastJob, { timezone: "Asia/Ho_Chi_Minh" });
 
-  // Cleanup: 2:00 AM mỗi ngày
-  cron.schedule("0 2 * * *", runCleanupJob, {
-    timezone: "Asia/Ho_Chi_Minh",
-  });
+  console.log("[AQI Cron] ✅ Đã đăng ký lịch trình.");
 
-  // Forecast: 8:00 AM mỗi ngày
-  cron.schedule("0 8 * * *", runForecastJob, {
-    timezone: "Asia/Ho_Chi_Minh",
-  });
-
-  console.log("[AQI Cron] ✅ Đã đăng ký cron jobs:");
-  console.log("  - Fetch data : mỗi giờ lúc :05 (Asia/Ho_Chi_Minh)");
-  console.log("  - Cleanup    : 02:00 AM hàng ngày");
-  console.log("  - Forecast   : 08:00 AM hàng ngày");
-
-  // Chạy ngay lần đầu khi server khởi động (không cần đợi đến :05)
-  console.log("[AQI Cron] 🚀 Chạy fetch và forecast lần đầu ngay lúc khởi động...");
+  // 2. Chạy ngay khi khởi động
+  // Chúng ta sẽ chạy runFetchJob() hiện tại để lấy dữ liệu realtime
   runFetchJob();
   runForecastJob();
 }

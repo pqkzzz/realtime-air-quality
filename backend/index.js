@@ -1,11 +1,14 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const app = express();
 const router = require("./routers/index");
 const { startCronJobs } = require("./jobs/airQualityCron");
 startCronJobs();
 
 const PORT = process.env.PORT || 3000;
+
+app.use(cors());
 
 // Middleware for parsing JSON bodies
 app.use(express.json());
