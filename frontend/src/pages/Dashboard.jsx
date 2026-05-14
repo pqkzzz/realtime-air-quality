@@ -231,6 +231,10 @@ const Dashboard = () => {
   const [selectedTrendDate, setSelectedTrendDate] = useState(() =>
     getSavedState("selectedTrendDate", "2026-04-15"),
   );
+  // Ngày được chọn tạm thời từ Heatmap (nếu có sẽ ghi đè lên selectedTrendDate)
+  const [heatmapSelectedDate, setHeatmapSelectedDate] = useState("");
+
+  const effectiveTrendDate = heatmapSelectedDate || selectedTrendDate;
 
   // Tab 3 States
   const [selectedCorrelationY, setSelectedCorrelationY] = useState(() =>
@@ -502,12 +506,13 @@ const Dashboard = () => {
 
   const trendRows = useMemo(() => {
     if (!data.length) return [];
-    const currentDate = parseDateKey(selectedTrendDate);
+
+    const currentDate = parseDateKey(effectiveTrendDate);
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-          getMonday(selectedTrendDate),
-          addDays(getMonday(selectedTrendDate), 6),
+          getMonday(effectiveTrendDate),
+          addDays(getMonday(effectiveTrendDate), 6),
         ]
         : [currentDate, currentDate];
     const sK = formatDateKey(startDate);
@@ -522,7 +527,7 @@ const Dashboard = () => {
     data,
     selectedTrendProvince,
     selectedTrendGranularity,
-    selectedTrendDate,
+    effectiveTrendDate,
   ]);
 
   const trendAqiValues = useMemo(
@@ -1515,8 +1520,10 @@ const Dashboard = () => {
                     <div className="hover-card" style={styles.chartCard}>
                       <h3 style={styles.chartTitle}>Ma trận nhiệt độ</h3>
                       <CalendarHeatmap
-                        data={trendRows}
+                        data={data}
                         province={selectedTrendProvince}
+                        selectedDate={effectiveTrendDate}
+                        onDateSelect={setHeatmapSelectedDate}
                         isCompact={true}
                       />
                     </div>

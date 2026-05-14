@@ -1,27 +1,33 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 /**
- * CalendarHeatmap Component
- * Hiển thị chỉ số AQI trung bình theo lịch 1 tháng (Tháng 4/2026)
- * Phong cách thiết kế: Custom Grid, Responsive, Hover-effects
+ * CalendarHeatmap Component - Bản nâng cấp Dynamic
+ * - Tự động tính toán lịch theo Tháng/Năm
+ * - Có nút điều chuyển tháng
+ * - Click vào ngày để chọn mốc thời gian cho Dashboard
  */
-const CalendarHeatmap = ({ data, province, isCompact = false }) => {
-  // 1. Lọc dữ liệu theo tỉnh thành (nếu có chọn)
+const CalendarHeatmap = ({ data, province, selectedDate, onDateSelect, isCompact = false }) => {
+  // 1. Khởi tạo trạng thái tháng đang xem (mặc định lấy theo ngày đang chọn)
+  const [viewDate, setViewDate] = useState(new Date(selectedDate || "2026-04-15"));
+
+  // Cập nhật viewDate khi selectedDate từ bên ngoài thay đổi (ví dụ đổi từ filter chính)
+  useEffect(() => {
+    if (selectedDate) {
+      setViewDate(new Date(selectedDate));
+    }
+  }, [selectedDate]);
+
+  // 2. Lọc dữ liệu theo tỉnh thành (Lấy toàn bộ dữ liệu của tỉnh để hiện màu cả tháng)
   const filteredData = province && province !== "Toàn quốc"
     ? data.filter(row => row.province === province)
     : data;
 
-  // 2. Tính trung bình AQI theo ngày
+  // 3. Tính trung bình AQI theo ngày
   const dailyMap = {};
   filteredData.forEach(row => {
     const dateKey = row.dateKey;
     if (!dateKey) return;
-    
-    if (!dailyMap[dateKey]) {
-      dailyMap[dateKey] = { sum: 0, count: 0 };
-    }
-    
-    // Đảm bảo row.us_aqi là số
+    if (!dailyMap[dateKey]) dailyMap[dateKey] = { sum: 0, count: 0 };
     const aqiVal = typeof row.us_aqi === 'number' ? row.us_aqi : parseFloat(row.us_aqi);
     if (!isNaN(aqiVal)) {
       dailyMap[dateKey].sum += aqiVal;
@@ -36,20 +42,34 @@ const CalendarHeatmap = ({ data, province, isCompact = false }) => {
     }
   });
 
-  // Cấu hình cho Tháng 4/2026
-  const daysInMonth = 30;
-  const startDayOffset = 3; // 1/4/2026 là Thứ Tư (0:CN, 1:T2, 2:T3, 3:T4...)
+  // 4. Logic tính toán lịch động
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth(); // 0-11
+  
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  
+  const daysInMonth = lastDayOfMonth.getDate();
+  const startDayOffset = firstDayOfMonth.getDay(); // 0: CN, 1: T2...
+  
+  const monthName = `Tháng ${month + 1}`;
   const dayNames = isCompact ? ["C", "2", "3", "4", "5", "6", "7"] : ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-  // Hàm lấy màu sắc theo chuẩn AQI
+  // 5. Điều hướng tháng
+  const changeMonth = (offset) => {
+    const newDate = new Date(year, month + offset, 1);
+    setViewDate(newDate);
+  };
+
+  // 6. Màu sắc & Style
   const getAqiColor = (aqi) => {
-    if (!aqi) return "#F1F5F9"; // Không có dữ liệu
-    if (aqi <= 50) return "#10B981";  // Tốt (Xanh lá)
-    if (aqi <= 100) return "#F59E0B"; // Trung bình (Vàng)
-    if (aqi <= 150) return "#F97316"; // Kém (Cam)
-    if (aqi <= 200) return "#EF4444"; // Xấu (Đỏ)
-    if (aqi <= 300) return "#8B5CF6"; // Rất xấu (Tím)
-    return "#7F1D1D"; // Nguy hại (Nâu đỏ)
+    if (!aqi) return "#F1F5F9";
+    if (aqi <= 50) return "#10B981";
+    if (aqi <= 100) return "#F59E0B";
+    if (aqi <= 150) return "#F97316";
+    if (aqi <= 200) return "#EF4444";
+    if (aqi <= 300) return "#8B5CF6";
+    return "#7F1D1D";
   };
 
   const getTextColor = (aqi) => {
@@ -57,146 +77,138 @@ const CalendarHeatmap = ({ data, province, isCompact = false }) => {
     return "#FFFFFF";
   };
 
+  const formatDateKey = (y, m, d) => {
+    return `${y}-${(m + 1).toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
+  };
+
   return (
     <div style={{
       backgroundColor: isCompact ? "transparent" : "#FFFFFF",
-      padding: isCompact ? "0" : "24px",
-      borderRadius: isCompact ? "0" : "16px",
-      boxShadow: isCompact ? "none" : "0 4px 6px -1px rgba(0,0,0,0.05)",
-      border: isCompact ? "none" : "1px solid #E2E8F0",
+      padding: isCompact ? "4px" : "20px",
+      borderRadius: "16px",
       width: "100%",
-      maxWidth: isCompact ? "100%" : "800px",
-      margin: "0 auto",
-      fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
+      fontFamily: "'Inter', sans-serif"
     }}>
-      {!isCompact && (
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px"
-        }}>
-          <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1E293B" }}>
-            Lịch nhiệt AQI: {province || "Toàn quốc"} (Tháng 04/2026)
-          </h3>
-          
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            {[50, 100, 150, 200, 300, 400].map(val => (
-              <div key={val} style={{ 
-                width: "12px", 
-                height: "12px", 
-                borderRadius: "2px", 
-                backgroundColor: getAqiColor(val) 
-              }} />
-            ))}
-            <span style={{ fontSize: "11px", color: "#64748B", marginLeft: "4px" }}>Tốt → Nguy hại</span>
-          </div>
+      {/* Header điều hướng */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "15px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button 
+            onClick={() => changeMonth(-1)}
+            style={{ 
+              border: "1px solid #E2E8F0", background: "#fff", borderRadius: "6px", cursor: "pointer",
+              width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "16px", color: "#64748B", transition: "all 0.2s"
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+          >
+            ‹
+          </button>
+          <span style={{ fontWeight: "800", fontSize: "14px", color: "#1E293B", minWidth: "90px", textAlign: "center" }}>
+            {monthName} / {year}
+          </span>
+          <button 
+            onClick={() => changeMonth(1)}
+            style={{ 
+              border: "1px solid #E2E8F0", background: "#fff", borderRadius: "6px", cursor: "pointer",
+              width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "16px", color: "#64748B"
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+          >
+            ›
+          </button>
         </div>
-      )}
+        
+        {!isCompact && (
+          <div style={{ display: "flex", gap: "4px" }}>
+            {[50, 100, 200, 400].map(v => (
+              <div key={v} style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: getAqiColor(v) }} />
+            ))}
+          </div>
+        )}
+      </div>
 
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(7, 1fr)",
-        gap: isCompact ? "4px" : "10px",
+        gap: isCompact ? "4px" : "8px",
       }}>
-        {/* Header các thứ trong tuần */}
         {dayNames.map(day => (
-          <div key={day} style={{
-            textAlign: "center",
-            fontSize: isCompact ? "10px" : "13px",
-            fontWeight: "600",
-            color: "#64748B",
-            paddingBottom: isCompact ? "4px" : "10px",
-            textTransform: "uppercase"
-          }}>
+          <div key={day} style={{ textAlign: "center", fontSize: "10px", fontWeight: "700", color: "#94A3B8", paddingBottom: "5px" }}>
             {day}
           </div>
         ))}
 
-        {/* Các ô trống trước ngày 1 */}
         {[...Array(startDayOffset)].map((_, i) => (
           <div key={`empty-${i}`} />
         ))}
 
-        {/* Các ngày trong tháng */}
         {[...Array(daysInMonth)].map((_, i) => {
           const day = i + 1;
-          const dateStr = `2026-04-${day.toString().padStart(2, "0")}`;
+          const dateStr = formatDateKey(year, month, day);
           const aqi = dailyAverages[dateStr];
-          const color = getAqiColor(aqi);
-          const textColor = getTextColor(aqi);
-
+          const isSelected = selectedDate === dateStr;
+          
           return (
             <div
               key={day}
+              onClick={() => {
+                if (onDateSelect) {
+                  // Nếu đang chọn chính ngày này thì bỏ chọn (set về ""), ngược lại thì chọn ngày mới
+                  onDateSelect(isSelected ? "" : dateStr);
+                }
+              }}
               style={{
                 aspectRatio: "1 / 1",
-                backgroundColor: color,
-                borderRadius: isCompact ? "4px" : "8px",
+                backgroundColor: getAqiColor(aqi),
+                borderRadius: isCompact ? "6px" : "10px",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "all 0.2s",
                 position: "relative",
-                border: aqi ? "none" : "1px dashed #CBD5E1",
+                border: isSelected ? "2px solid #3B82F6" : (aqi ? "none" : "1px dashed #E2E8F0"),
+                boxShadow: isSelected ? "0 0 10px rgba(59, 130, 246, 0.4)" : "none",
+                zIndex: isSelected ? 2 : 1
               }}
-              className="calendar-cell"
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.12) translateY(-2px)";
+                e.currentTarget.style.transform = "scale(1.15)";
                 e.currentTarget.style.zIndex = "10";
-                e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1) translateY(0)";
-                e.currentTarget.style.zIndex = "1";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.zIndex = isSelected ? "2" : "1";
               }}
+              title={`${dateStr}: AQI ${aqi || "N/A"}`}
             >
               <span style={{
-                fontSize: isCompact ? "8px" : "11px",
-                fontWeight: "600",
-                color: textColor,
-                opacity: 0.7,
+                fontSize: isCompact ? "7px" : "9px",
+                fontWeight: "700",
+                color: getTextColor(aqi),
                 position: "absolute",
-                top: isCompact ? "2px" : "6px",
-                left: isCompact ? "3px" : "8px"
+                top: "2px",
+                left: "4px",
+                opacity: 0.6
               }}>
                 {day}
               </span>
-              {aqi ? (
-                <span style={{
-                  fontSize: isCompact ? "12px" : "18px",
-                  fontWeight: "800",
-                  color: textColor,
-                  letterSpacing: "-0.025em"
-                }}>
+              {aqi && (
+                <span style={{ fontSize: isCompact ? "11px" : "14px", fontWeight: "800", color: getTextColor(aqi) }}>
                   {aqi}
                 </span>
-              ) : null}
+              )}
             </div>
           );
         })}
       </div>
-      
-      {!isCompact && (
-        <div style={{ marginTop: "24px", display: "flex", gap: "16px", flexWrap: "wrap", borderTop: "1px solid #F1F5F9", paddingTop: "16px" }}>
-          {[
-            { range: "0-50", label: "Tốt", color: "#10B981" },
-            { range: "51-100", label: "Trung bình", color: "#F59E0B" },
-            { range: "101-150", label: "Kém", color: "#F97316" },
-            { range: "151-200", label: "Xấu", color: "#EF4444" },
-            { range: "201-300", label: "Rất xấu", color: "#8B5CF6" },
-            { range: "301+", label: "Nguy hại", color: "#7F1D1D" }
-          ].map(item => (
-            <div key={item.range} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color }}></div>
-                <span style={{ fontSize: "12px", color: "#64748B", fontWeight: "500" }}>{item.range}: {item.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

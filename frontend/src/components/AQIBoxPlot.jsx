@@ -20,41 +20,40 @@ function formatDate(value) {
 function quantile(sortedValues, q) {
   if (!sortedValues.length) return 0;
   if (sortedValues.length === 1) return sortedValues[0];
-
   const position = (sortedValues.length - 1) * q;
   const baseIndex = Math.floor(position);
   const rest = position - baseIndex;
   const next = sortedValues[baseIndex + 1];
-
   if (next === undefined) return sortedValues[baseIndex];
   return sortedValues[baseIndex] + rest * (next - sortedValues[baseIndex]);
 }
 
 function getMetricValue(row, metricKey) {
-  const raw = row?.[metricKey] ?? row?.us_aqi ?? row?.AQI;
+  // Ưu tiên metricKey, nếu không có thử các cột phổ biến
+  const raw = row?.[metricKey] ?? row?.us_aqi ?? row?.AQI ?? row?.aqi;
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }
 
-function BoxPlotAnomalies({
+const BoxPlotAnomalies = ({
   rows = [],
   metricKey = "us_aqi",
-  provinceLabel = "Toàn quốc",
-  dateRangeLabel = "",
-}) {
+}) => {
   const chartBundle = useMemo(() => {
     const byDay = new Map();
 
     rows.forEach((row) => {
-      const dateKey = row?.dateKey ?? String(row?.datetime ?? "").split(" ")[0];
+      // Đảm bảo lấy đúng dateKey (YYYY-MM-DD)
+      const dateKey = row?.dateKey || (row?.datetime ? row.datetime.slice(0, 10) : "");
       const value = getMetricValue(row, metricKey);
-      if (!dateKey || !Number.isFinite(value)) return;
+      
+      if (!dateKey || value === null) return;
 
       if (!byDay.has(dateKey)) byDay.set(dateKey, []);
       byDay.get(dateKey).push(value);
     });
 
-    const daily = Array.from(byDay.entries())
+    const dailyGroups = Array.from(byDay.entries())
       .map(([dateKey, values]) => ({
         dateKey,
         values: values.slice().sort((a, b) => a - b),
@@ -63,164 +62,121 @@ function BoxPlotAnomalies({
 
     const boxData = [];
     const scatterData = [];
-    let totalOutliers = 0;
-    let medianSum = 0;
 
-    daily.forEach(({ dateKey, values }) => {
-      if (values.length < 2) return;
-
+    dailyGroups.forEach(({ dateKey, values }) => {
+      // Tính toán các thông số Boxplot
+      const minVal = Math.min(...values);
+      const maxVal = Math.max(...values);
       const q1 = quantile(values, 0.25);
       const median = quantile(values, 0.5);
       const q3 = quantile(values, 0.75);
+      
       const iqr = q3 - q1;
-      const lower = q1 - 1.5 * iqr;
-      const upper = q3 + 1.5 * iqr;
+      const lowerFence = q1 - 1.5 * iqr;
+      const upperFence = q3 + 1.5 * iqr;
 
-      const inside = values.filter((v) => v >= lower && v <= upper);
-      const outliers = values.filter((v) => v < lower || v > upper);
-
-      const min = inside.length ? Math.min(...inside) : q1;
-      const max = inside.length ? Math.max(...inside) : q3;
-
+      // Phân tách dữ liệu thường và dị thường
+      const outliers = values.filter(v => v < lowerFence || v > upperFence);
+      
+      // Boxplot data yêu cầu định dạng [min, q1, median, q3, max]
+      // Nếu iqr = 0 (tất cả giá trị bằng nhau), chúng ta vẫn vẽ 1 đường thẳng
       boxData.push({
         x: formatDate(dateKey),
-        y: [min, q1, median, q3, max].map((v) => Number(v.toFixed(1))),
+        y: [minVal, q1, median, q3, maxVal].map(v => Number(v.toFixed(1)))
       });
 
-      outliers.forEach((outlier) => {
+      // Scatter data cho các điểm dị thường
+      outliers.forEach(v => {
         scatterData.push({
           x: formatDate(dateKey),
-          y: Number(outlier.toFixed(1)),
+          y: Number(v.toFixed(1))
         });
       });
-
-      totalOutliers += outliers.length;
-      medianSum += median;
     });
 
     return {
       series: [
         {
-          name: "Hộp phân vị",
+          name: "Phân phối AQI",
           type: "boxPlot",
-          data: boxData,
+          data: boxData
         },
         {
           name: "Dị thường",
           type: "scatter",
-          data: scatterData,
-        },
+          data: scatterData
+        }
       ],
-      days: daily.length,
+      daysCount: dailyGroups.length
     };
   }, [rows, metricKey]);
 
-  const options = useMemo(
-    () => ({
-      chart: {
-        type: "boxPlot",
-        toolbar: { show: false },
-        background: "transparent",
-        fontFamily: "Inter, sans-serif",
-        animations: { enabled: true },
-      },
-      colors: ["#64748B", "#EF4444"],
-      plotOptions: {
-        boxPlot: {
-          colors: {
-            upper: "#94A3B8",
-            lower: "#CBD5E1",
-          },
-        },
-      },
-      stroke: {
-        width: [2, 0],
-        colors: ["#475569", "#EF4444"],
-      },
-      markers: {
-        size: [0, 5],
-        strokeWidth: 2,
-        hover: {
-          size: 6,
-        },
-      },
-      dataLabels: { enabled: false },
-      grid: {
-        borderColor: "#E2E8F0",
-        strokeDashArray: 4,
-      },
-      xaxis: {
-        type: "category",
-        labels: {
-          style: {
-            colors: "#64748B",
-            fontWeight: 600,
-            fontSize: "11px",
-          },
-        },
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-      },
-      yaxis: {
-        title: {
-          text: "AQI",
-          style: {
-            color: "#64748B",
-            fontWeight: 700,
-          },
-        },
-        labels: {
-          style: {
-            colors: "#64748B",
-          },
-          formatter: (value) => formatNumber(value, 0),
-        },
-      },
-      legend: {
-        position: "top",
-        horizontalAlign: "left",
-        markers: { radius: 12 },
-        fontSize: "12px",
-        fontWeight: 700,
-        itemMargin: {
-          horizontal: 12,
-          vertical: 4,
-        },
-      },
-      tooltip: {
-        shared: false,
-        intersect: true,
-        theme: "light",
-        y: {
-          formatter: (value) => formatNumber(value, 1),
-        },
-      },
-    }),
-    [],
-  );
+  const options = {
+    chart: {
+      type: "boxPlot",
+      toolbar: { show: false },
+      background: "transparent",
+      fontFamily: "'Inter', sans-serif",
+      animations: { enabled: true }
+    },
+    title: { show: false },
+    colors: ["#64748B", "#EF4444"], // Xám cho Box, Đỏ cho Outlier
+    plotOptions: {
+      boxPlot: {
+        colors: {
+          upper: "#94A3B8",
+          lower: "#CBD5E1"
+        }
+      }
+    },
+    stroke: {
+      colors: ["#475569"]
+    },
+    grid: {
+      borderColor: "#F1F5F9",
+      strokeDashArray: 4,
+      xaxis: { lines: { show: false } }
+    },
+    xaxis: {
+      type: "category",
+      labels: {
+        rotate: -45,
+        style: { fontSize: "11px", fontWeight: 600, colors: "#64748B" }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: { colors: "#64748B" },
+        formatter: (val) => Math.round(val)
+      }
+    },
+    tooltip: {
+      shared: false,
+      intersect: true,
+      theme: "light"
+    },
+    legend: {
+      position: "top",
+      horizontalAlign: "right",
+      fontSize: "12px",
+      fontWeight: 600,
+      labels: { colors: "#475569" }
+    }
+  };
 
-  if (!rows.length || chartBundle.days === 0) {
+  if (!rows.length || chartBundle.daysCount === 0) {
     return (
-      <div
-        style={{
-          height: "320px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#64748B",
-          background: "#F8FAFC",
-          borderRadius: "12px",
-          border: "1px dashed #E2E8F0",
-          fontWeight: 600,
-        }}
-      >
-        Không có dữ liệu cho khoảng thời gian này
+      <div style={{
+        height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#94A3B8", fontSize: "14px", fontWeight: "500", border: "1px dashed #E2E8F0", borderRadius: "12px"
+      }}>
+        Chưa có dữ liệu phân tích
       </div>
     );
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "260px" }}>
+    <div style={{ width: "100%", height: "300px" }}>
       <Chart
         options={options}
         series={chartBundle.series}
@@ -229,6 +185,6 @@ function BoxPlotAnomalies({
       />
     </div>
   );
-}
+};
 
 export default BoxPlotAnomalies;
