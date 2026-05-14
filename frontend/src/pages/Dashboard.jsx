@@ -304,7 +304,8 @@ const Dashboard = () => {
       padding: "0 40px",
       height: "70px",
       flexShrink: 0,
-      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+      boxShadow:
+        "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
       position: "sticky",
       top: 0,
       zIndex: 100,
@@ -483,8 +484,8 @@ const Dashboard = () => {
       ).size,
       exceedPct: values.length
         ? (values.filter((v) => v >= overviewMetricThreshold).length /
-          values.length) *
-        100
+            values.length) *
+          100
         : 0,
     };
   }, [overviewRows, selectedOverviewMetric, overviewMetricThreshold]);
@@ -495,9 +496,9 @@ const Dashboard = () => {
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-          getMonday(selectedTrendDate),
-          addDays(getMonday(selectedTrendDate), 6),
-        ]
+            getMonday(selectedTrendDate),
+            addDays(getMonday(selectedTrendDate), 6),
+          ]
         : [currentDate, currentDate];
     const sK = formatDateKey(startDate);
     const eK = formatDateKey(endDate);
@@ -794,20 +795,61 @@ const Dashboard = () => {
       <div style={styles.topbar}>
         <div style={styles.topbarLogo}>
           <div>
-            <p style={styles.topbarTitle}>Phân tích Chỉ số Chất lượng Không khí Việt Nam</p>
-            <p style={styles.topbarSub}>GVHD: Nguyễn Tiến Huy • KHTN • HCMUS • Năm 2025–2026</p>
+            <p style={styles.topbarTitle}>
+              Phân tích Chỉ số Chất lượng Không khí Việt Nam
+            </p>
+            <p style={styles.topbarSub}>
+              GVHD: Nguyễn Tiến Huy • KHTN • HCMUS • Năm 2025–2026
+            </p>
           </div>
         </div>
         <div style={styles.topbarActions}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: "0.08em" }}>AQI HIỆN TẠI:</span>
-            {[{ max: 50, lbl: "Tốt", c: "#00C853" }, { max: 100, lbl: "Vừa", c: "#FFD600" }, { max: 150, lbl: "Nhạy cảm", c: "#FF6D00" }, { max: 200, lbl: "Xấu", c: "#D50000" }].map(({ lbl, c }) => (
-              <span key={lbl} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: "rgba(255,255,255,0.8)" }}>
-                <span style={{ width: "9px", height: "9px", borderRadius: "50%", backgroundColor: c, display: "inline-block" }} />{lbl}
+            <span
+              style={{
+                fontSize: "11px",
+                fontWeight: "700",
+                color: "rgba(255,255,255,0.55)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              AQI HIỆN TẠI:
+            </span>
+            {[
+              { max: 50, lbl: "Tốt", c: "#00C853" },
+              { max: 100, lbl: "Vừa", c: "#FFD600" },
+              { max: 150, lbl: "Nhạy cảm", c: "#FF6D00" },
+              { max: 200, lbl: "Xấu", c: "#D50000" },
+            ].map(({ lbl, c }) => (
+              <span
+                key={lbl}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  color: "rgba(255,255,255,0.8)",
+                }}
+              >
+                <span
+                  style={{
+                    width: "9px",
+                    height: "9px",
+                    borderRadius: "50%",
+                    backgroundColor: c,
+                    display: "inline-block",
+                  }}
+                />
+                {lbl}
               </span>
             ))}
           </div>
-          <button className="topbar-pill-btn" onClick={() => window.location.reload()}>
+          <button
+            className="topbar-pill-btn"
+            onClick={() => window.location.reload()}
+          >
             <span style={{ fontSize: "14px" }}>⟳</span> Làm mới
           </button>
         </div>
@@ -820,7 +862,11 @@ const Dashboard = () => {
           {[
             { tab: "overview", label: "Tổng quan", icon: <IconOverview /> },
             { tab: "trend", label: "Xu hướng", icon: <IconTrend /> },
-            { tab: "correlation", label: "Tương quan", icon: <IconCorrelation /> },
+            {
+              tab: "correlation",
+              label: "Tương quan",
+              icon: <IconCorrelation />,
+            },
           ].map(({ tab, label, icon }) => (
             <button
               key={tab}
@@ -840,50 +886,141 @@ const Dashboard = () => {
             {/* ================= TAB 1: OVERVIEW ================= */}
             {activeTab === "overview" && (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: "20px", marginBottom: "30px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
+                    gap: "20px",
+                    marginBottom: "30px",
+                  }}
+                >
                   {(() => {
                     const avg = overviewStats.average;
                     let sLabel = "--";
                     let sColor = "#333";
                     if (avg != null) {
-                      if (avg <= 50) { sLabel = "Tốt"; sColor = "#00C853"; }
-                      else if (avg <= 100) { sLabel = "Vừa"; sColor = "#FFD600"; }
-                      else if (avg <= 150) { sLabel = "Nhạy cảm"; sColor = "#E54B4B"; }
-                      else if (avg <= 200) { sLabel = "Xấu"; sColor = "#D50000"; }
-                      else { sLabel = "Rất xấu"; sColor = "#B71C1C"; }
+                      if (avg <= 50) {
+                        sLabel = "Tốt";
+                        sColor = "#00C853";
+                      } else if (avg <= 100) {
+                        sLabel = "Vừa";
+                        sColor = "#FFD600";
+                      } else if (avg <= 150) {
+                        sLabel = "Nhạy cảm";
+                        sColor = "#E54B4B";
+                      } else if (avg <= 200) {
+                        sLabel = "Xấu";
+                        sColor = "#D50000";
+                      } else {
+                        sLabel = "Rất xấu";
+                        sColor = "#B71C1C";
+                      }
                     }
                     return (
-                      <div className="hover-card" style={{ ...styles.kpiCard, borderLeft: `4px solid ${sColor}`, padding: "16px 20px" }}>
-                        <span style={{ ...styles.label, fontSize: "12px" }}>AQI TRUNG BÌNH</span>
-                        <h3 style={{ ...styles.kpiValue, color: sColor, fontSize: "32px", marginTop: "4px", lineHeight: "1" }}>
-                          {avg == null ? "--" : formatNumber(avg, currentOverviewMetricDecimals)}
+                      <div
+                        className="hover-card"
+                        style={{
+                          ...styles.kpiCard,
+                          borderLeft: `4px solid ${sColor}`,
+                          padding: "16px 20px",
+                        }}
+                      >
+                        <span style={{ ...styles.label, fontSize: "12px" }}>
+                          AQI TRUNG BÌNH
+                        </span>
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            color: sColor,
+                            fontSize: "32px",
+                            marginTop: "4px",
+                            lineHeight: "1",
+                          }}
+                        >
+                          {avg == null
+                            ? "--"
+                            : formatNumber(avg, currentOverviewMetricDecimals)}
                         </h3>
-                        <div style={{ fontSize: "13px", fontWeight: "600", color: sColor, marginTop: "6px" }}>{sLabel}</div>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: sColor,
+                            marginTop: "6px",
+                          }}
+                        >
+                          {sLabel}
+                        </div>
                       </div>
                     );
                   })()}
-                  <div className="hover-card" style={{ ...styles.kpiCard, justifyContent: "center", padding: "16px 20px" }}>
-                    <span style={{ ...styles.label, fontSize: "12px" }}>CAO NHẤT</span>
-                    <h3 style={{ ...styles.kpiValue, fontSize: "24px", marginTop: "4px" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      justifyContent: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <span style={{ ...styles.label, fontSize: "12px" }}>
+                      CAO NHẤT
+                    </span>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "24px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {overviewStats.max == null
                         ? "--"
                         : formatNumber(
-                          overviewStats.max,
-                          currentOverviewMetricDecimals,
-                        )}
+                            overviewStats.max,
+                            currentOverviewMetricDecimals,
+                          )}
                     </h3>
                   </div>
-                  <div className="hover-card" style={{ ...styles.kpiCard, justifyContent: "center", padding: "16px 20px" }}>
-                    <span style={{ ...styles.label, fontSize: "12px" }}>SỐ TỈNH</span>
-                    <h3 style={{ ...styles.kpiValue, fontSize: "24px", marginTop: "4px" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      justifyContent: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <span style={{ ...styles.label, fontSize: "12px" }}>
+                      SỐ TỈNH
+                    </span>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "24px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {overviewStats.warningProvinces == null
                         ? "--"
                         : overviewStats.warningProvinces}
                     </h3>
                   </div>
-                  <div className="hover-card" style={{ ...styles.kpiCard, justifyContent: "center", padding: "16px 20px" }}>
-                    <span style={{ ...styles.label, fontSize: "12px" }}>VƯỢT WHO</span>
-                    <h3 style={{ ...styles.kpiValue, fontSize: "24px", marginTop: "4px" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      justifyContent: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <span style={{ ...styles.label, fontSize: "12px" }}>
+                      VƯỢT WHO
+                    </span>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "24px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {overviewStats.exceedPct == null
                         ? "--"
                         : formatPercent(overviewStats.exceedPct, 1)}
@@ -904,7 +1041,8 @@ const Dashboard = () => {
                   </h4>
                   <p style={{ margin: 0 }}>
                     Dữ liệu ghi nhận mức độ ô nhiễm trung bình toàn quốc trong
-                    tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao hơn...
+                    tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao
+                    hơn...
                   </p>
                 </div>
 
@@ -1019,114 +1157,498 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "30px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "20px",
+                    marginBottom: "30px",
+                  }}
+                >
                   {/* Hero Metric 1: TB Kỳ */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, gridColumn: "span 2", display: "flex", flexDirection: "row", alignItems: "center", padding: "16px 20px" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      gridColumn: "span 2",
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
                     <div style={{ flex: 1 }}>
-                      <span style={{...styles.label, fontSize: "12px", color: "#64748B"}}>TRUNG BÌNH KỲ</span>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginTop: "6px" }}>
-                        <h3 style={{ ...styles.kpiValue, fontSize: "36px", lineHeight: "1" }}>
-                          {trendStats.average == null ? "--" : formatNumber(trendStats.average, 0)}
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "12px",
+                          color: "#64748B",
+                        }}
+                      >
+                        TRUNG BÌNH KỲ
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "12px",
+                          marginTop: "6px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            fontSize: "36px",
+                            lineHeight: "1",
+                          }}
+                        >
+                          {trendStats.average == null
+                            ? "--"
+                            : formatNumber(trendStats.average, 0)}
                         </h3>
                         {trendStats.average != null && (
-                          <span style={{ padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", backgroundColor: "#E0E7FF", color: "#4F46E5" }}>
+                          <span
+                            style={{
+                              padding: "3px 8px",
+                              borderRadius: "10px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              backgroundColor: "#E0E7FF",
+                              color: "#4F46E5",
+                            }}
+                          >
                             AQI Index
                           </span>
                         )}
                       </div>
                     </div>
-                    <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#EEF2FF", color: "#4F46E5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>
+                    <div
+                      style={{
+                        flexShrink: 0,
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "14px",
+                        background: "#EEF2FF",
+                        color: "#4F46E5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 3v18h18" />
+                        <path d="M18 17V9" />
+                        <path d="M13 17V5" />
+                        <path d="M8 17v-3" />
                       </svg>
                     </div>
                   </div>
 
                   {/* Hero Metric 2: Biến động */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, gridColumn: "span 2", display: "flex", flexDirection: "row", alignItems: "center", padding: "16px 20px" }}>
-                    <div style={{ flex: 1 }}>
-                      <span style={{...styles.label, fontSize: "12px", color: "#64748B"}}>MỨC ĐỘ BIẾN ĐỘNG</span>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginTop: "6px" }}>
-                        <h3 style={{ ...styles.kpiValue, fontSize: "36px", lineHeight: "1" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      gridColumn: "span 2",
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "12px",
+                          color: "#64748B",
+                        }}
+                      >
+                        MỨC ĐỘ BIẾN ĐỘNG
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "12px",
+                          marginTop: "6px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            fontSize: "36px",
+                            lineHeight: "1",
+                          }}
+                        >
                           {formatPercent(trendStats.volatility, 1)}
                         </h3>
-                        <span style={{ padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", backgroundColor: "#ECFDF5", color: "#059669" }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }}>
-                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+                        <span
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: "10px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            backgroundColor: "#ECFDF5",
+                            color: "#059669",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{
+                              display: "inline",
+                              marginRight: "4px",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                            <polyline points="16 7 22 7 22 13" />
                           </svg>
                           Dao động
                         </span>
                       </div>
                     </div>
-                    <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#ECFDF5", color: "#10B981", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <div
+                      style={{
+                        flexShrink: 0,
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "14px",
+                        background: "#ECFDF5",
+                        color: "#10B981",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                       </svg>
                     </div>
                   </div>
 
                   {/* Secondary Metric 1: Ngày vượt */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, padding: "16px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                      <span style={{ ...styles.label, fontSize: "12px" }}>NGÀY VƯỢT</span>
-                      <div style={{ padding: "6px", background: "#FEF2F2", borderRadius: "8px", color: "#EF4444" }}>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        NGÀY VƯỢT
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#FEF2F2",
+                          borderRadius: "8px",
+                          color: "#EF4444",
+                        }}
+                      >
+                        {/* ĐÃ THÊM VIEWBOX VÀO ĐÂY */}
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                          <line x1="12" y1="9" x2="12" y2="13" />
+                          <line x1="12" y1="17" x2="12.01" y2="17" />
                         </svg>
                       </div>
                     </div>
-                    <h3 style={{ ...styles.kpiValue, fontSize: "24px", marginTop: "12px" }}>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "22px",
+                        marginTop: "8px",
+                      }}
+                    >
                       {trendStats.exceedDays}
                     </h3>
                   </div>
 
                   {/* Secondary Metric 2: Cao/Thấp */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, padding: "16px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                      <span style={{ ...styles.label, fontSize: "12px" }}>CAO / THẤP</span>
-                      <div style={{ padding: "6px", background: "#F1F5F9", borderRadius: "8px", color: "#64748B" }}>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        CAO / THẤP
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#F1F5F9",
+                          borderRadius: "8px",
+                          color: "#64748B",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="7 15 12 20 17 15" />
+                          <polyline points="7 9 12 4 17 9" />
                         </svg>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginTop: "12px" }}>
-                      <h3 style={{ ...styles.kpiValue, fontSize: "24px" }}>{formatNumber(trendStats.max, 0)}</h3>
-                      <span style={{ color: "#94A3B8", fontSize: "14px", fontWeight: "600" }}>/ {formatNumber(trendStats.min, 0)}</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "6px",
+                        marginTop: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <h3 style={{ ...styles.kpiValue, fontSize: "22px" }}>
+                        {formatNumber(trendStats.max, 0)}
+                      </h3>
+                      <span
+                        style={{
+                          color: "#94A3B8",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        / {formatNumber(trendStats.min, 0)}
+                      </span>
                     </div>
                   </div>
 
                   {/* Secondary Metric 3: Dự báo đỉnh */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, padding: "16px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                      <span style={{ ...styles.label, fontSize: "12px" }}>DỰ BÁO ĐỈNH</span>
-                      <div style={{ padding: "6px", background: "#FFFBEB", borderRadius: "8px", color: "#D97706" }}>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        DỰ BÁO ĐỈNH
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#FFFBEB",
+                          borderRadius: "8px",
+                          color: "#D97706",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <circle cx="12" cy="12" r="6" />
+                          <circle cx="12" cy="12" r="2" />
                         </svg>
                       </div>
                     </div>
-                    <h3 style={{ ...styles.kpiValue, fontSize: "24px", marginTop: "12px" }}>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "22px",
+                        marginTop: "8px",
+                      }}
+                    >
                       {formatNumber(trendStats.forecastPeak, 0)}
                     </h3>
                   </div>
 
                   {/* Secondary Metric 4: Giờ rủi ro */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, padding: "16px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
-                      <span style={{ ...styles.label, fontSize: "12px" }}>GIỜ RỦI RO</span>
-                      <div style={{ padding: "6px", background: "#F3E8FF", borderRadius: "8px", color: "#9333EA" }}>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        GIỜ RỦI RO
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#F3E8FF",
+                          borderRadius: "8px",
+                          color: "#9333EA",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
                         </svg>
                       </div>
                     </div>
-                    <h3 style={{ ...styles.kpiValue, fontSize: "24px", marginTop: "12px" }}>
+                    <h3
+                      style={{
+                        ...styles.kpiValue,
+                        fontSize: "22px",
+                        marginTop: "8px",
+                      }}
+                    >
                       {trendStats.riskHours}
                     </h3>
                   </div>
                 </div>
-
                 {/* [CHỖ CHÈN INSIGHT TAB 2] */}
                 <div className="insight-box" style={{ marginBottom: "30px" }}>
                   <h4
@@ -1238,49 +1760,182 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "30px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "20px",
+                    marginBottom: "30px",
+                  }}
+                >
                   {/* Hero Metric 1: Pearson */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, display: "flex", flexDirection: "row", alignItems: "center", padding: "16px 20px" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
                     <div style={{ flex: 1 }}>
-                      <span style={{...styles.label, fontSize: "12px", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em"}}>Hệ số tương quan Pearson</span>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginTop: "8px" }}>
-                        <h3 style={{ ...styles.kpiValue, fontSize: "36px", lineHeight: "1", color: "#0F172A" }}>
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "12px",
+                          color: "#64748B",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Hệ số tương quan Pearson
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "12px",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            fontSize: "36px",
+                            lineHeight: "1",
+                            color: "#0F172A",
+                          }}
+                        >
                           {correlationStats.pearson == null
                             ? "--"
                             : formatNumber(correlationStats.pearson, 3)}
                         </h3>
                         {correlationStats.pearson != null && (
-                          <span style={{ padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", backgroundColor: "#EFF6FF", color: "#2563EB" }}>
+                          <span
+                            style={{
+                              padding: "3px 8px",
+                              borderRadius: "10px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              backgroundColor: "#EFF6FF",
+                              color: "#2563EB",
+                            }}
+                          >
                             R² Score
                           </span>
                         )}
                       </div>
                     </div>
-                    <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#EFF6FF", color: "#3B82F6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    <div
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "14px",
+                        background: "#EFF6FF",
+                        color: "#3B82F6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="12" r="3" />
+                        <circle cx="18" cy="19" r="3" />
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                       </svg>
                     </div>
                   </div>
 
                   {/* Hero Metric 2: Thành phần chính */}
-                  <div className="hover-card" style={{ ...styles.kpiCard, display: "flex", flexDirection: "row", alignItems: "center", padding: "16px 20px" }}>
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: "16px 20px",
+                    }}
+                  >
                     <div style={{ flex: 1 }}>
-                      <span style={{...styles.label, fontSize: "12px", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em"}}>Thành phần chính gây ô nhiễm</span>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginTop: "8px" }}>
-                        <h3 style={{ ...styles.kpiValue, fontSize: "36px", lineHeight: "1", color: "#0F172A" }}>
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "12px",
+                          color: "#64748B",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Thành phần chính gây ô nhiễm
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "12px",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            ...styles.kpiValue,
+                            fontSize: "36px",
+                            lineHeight: "1",
+                            color: "#0F172A",
+                          }}
+                        >
                           {correlationStats.dominantComponent ?? "--"}
                         </h3>
                         {correlationStats.dominantComponent && (
-                          <span style={{ padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", backgroundColor: "#FFF7ED", color: "#EA580C" }}>
+                          <span
+                            style={{
+                              padding: "3px 8px",
+                              borderRadius: "10px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              backgroundColor: "#FFF7ED",
+                              color: "#EA580C",
+                            }}
+                          >
                             Chủ đạo
                           </span>
                         )}
                       </div>
                     </div>
-                    <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "#FFF7ED", color: "#F97316", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+                    <div
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "14px",
+                        background: "#FFF7ED",
+                        color: "#F97316",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
                       </svg>
                     </div>
                   </div>
@@ -1298,8 +1953,8 @@ const Dashboard = () => {
                     💡 INSIGHT TƯƠNG QUAN
                   </h4>
                   <p style={{ margin: 0 }}>
-                    Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và AQI
-                    tại các khu vực đô thị lớn...
+                    Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và
+                    AQI tại các khu vực đô thị lớn...
                   </p>
                 </div>
 
@@ -1361,9 +2016,13 @@ const Dashboard = () => {
                     <ScatterPlot
                       rows={correlationRows}
                       xKey={selectedCorrelationX}
-                      xLabel={CORRELATION_X_METRICS[selectedCorrelationX]?.label}
+                      xLabel={
+                        CORRELATION_X_METRICS[selectedCorrelationX]?.label
+                      }
                       yKey={selectedCorrelationY}
-                      yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label}
+                      yLabel={
+                        CORRELATION_Y_METRICS[selectedCorrelationY]?.label
+                      }
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
@@ -1371,7 +2030,9 @@ const Dashboard = () => {
                     <RadarChart
                       rows={correlationRows}
                       selectedY={selectedCorrelationY}
-                      yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label}
+                      yLabel={
+                        CORRELATION_Y_METRICS[selectedCorrelationY]?.label
+                      }
                       yThreshold={100}
                       allXMetrics={CORRELATION_X_METRICS}
                       areaLabel={selectedCorrelationProvince || "Toàn quốc"}
