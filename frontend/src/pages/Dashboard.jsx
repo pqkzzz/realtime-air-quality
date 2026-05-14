@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useGemini } from '../hooks/useGemini';
 import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
@@ -308,7 +309,7 @@ const Dashboard = () => {
         "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
       position: "sticky",
       top: 0,
-      zIndex: 100,
+      zIndex: 9999,
     },
     topbarLogo: {
       display: "flex",
@@ -484,8 +485,8 @@ const Dashboard = () => {
       ).size,
       exceedPct: values.length
         ? (values.filter((v) => v >= overviewMetricThreshold).length /
-            values.length) *
-          100
+          values.length) *
+        100
         : 0,
     };
   }, [overviewRows, selectedOverviewMetric, overviewMetricThreshold]);
@@ -496,9 +497,9 @@ const Dashboard = () => {
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-            getMonday(selectedTrendDate),
-            addDays(getMonday(selectedTrendDate), 6),
-          ]
+          getMonday(selectedTrendDate),
+          addDays(getMonday(selectedTrendDate), 6),
+        ]
         : [currentDate, currentDate];
     const sK = formatDateKey(startDate);
     const eK = formatDateKey(endDate);
@@ -660,7 +661,74 @@ const Dashboard = () => {
       <line x1="3" y1="18" x2="21" y2="18"></line>
     </svg>
   );
+  // === GEMINI AI ENGINE ===
+  const { generateInsight, loadingAI } = useGemini();
+  const [insightT1, setInsightT1] = useState("");
+  const [insightT2, setInsightT2] = useState("- Nhận xét chính: Chưa phân tích\n- Lý do: Bấm 'Phân tích xu hướng' để bắt đầu.\n- Hành động gợi ý: Chờ lệnh.");
+  const [insightT3, setInsightT3] = useState("- Nhận xét chính: Chưa phân tích\n- Lý do: Bấm 'Phân tích tương quan' để bắt đầu.\n- Hành động gợi ý: Chờ lệnh.");
 
+  // Tự động phân tích Tab 1 khi data đã sẵn sàng
+  useEffect(() => {
+    const fetchTab1Auto = async () => {
+      if (activeTab === 'overview' && overviewRows.length > 0 && insightT1 === "") {
+
+
+        const provinceGroups = {};
+        overviewRows.forEach(row => {
+          if (!provinceGroups[row.province]) {
+            provinceGroups[row.province] = { totalAqi: 0, count: 0 };
+          }
+          provinceGroups[row.province].totalAqi += row.us_aqi;
+          provinceGroups[row.province].count += 1;
+        });
+
+
+        const aggregatedList = Object.keys(provinceGroups).map(prov => ({
+          province: prov,
+          avg_aqi: provinceGroups[prov].totalAqi / provinceGroups[prov].count
+        })).sort((a, b) => b.avg_aqi - a.avg_aqi);
+
+
+        const payloadT1 = {
+          trung_binh_chung: overviewStats.average?.toFixed(1) || "0",
+          so_tinh_vuot_nguong: overviewStats.warningProvinces || 0,
+          top_3_o_nhiem: aggregatedList.slice(0, 3).map(r => r.province),
+          top_3_trong_lanh: [...aggregatedList].reverse().slice(0, 3).map(r => r.province)
+        };
+
+        const result = await generateInsight(payloadT1);
+        setInsightT1(result);
+      }
+    };
+    fetchTab1Auto();
+  }, [activeTab, overviewRows.length, insightT1]);
+
+  // Hàm gọi AI cho Tab 2 và Tab 3 (Dùng nút bấm)
+  const handleCallAI = async (tab) => {
+    if (tab === 'trend') {
+      const payloadT2 = {
+        average: trendStats.average?.toFixed(1),
+        max: trendStats.max,
+        min: trendStats.min,
+        exceedDays: trendStats.exceedDays,
+        volatility: trendStats.volatility?.toFixed(1) + "%",
+        riskHours: trendStats.riskHours
+      };
+      const result = await generateInsight(payloadT2);
+      setInsightT2(result);
+    }
+    else if (tab === 'correlation') {
+      const payloadT3 = {
+        bien_Y: CORRELATION_Y_METRICS[selectedCorrelationY]?.label,
+        bien_X: CORRELATION_X_METRICS[selectedCorrelationX]?.label,
+        he_so_Pearson: correlationStats.pearson?.toFixed(2),
+        thanh_phan_chu_dao: correlationStats.dominantComponent
+      };
+      const result = await generateInsight(payloadT3);
+      setInsightT3(result);
+    }
+  };
+  // ==========================
   return (
     <div style={styles.app}>
       <style>
@@ -975,9 +1043,9 @@ const Dashboard = () => {
                       {overviewStats.max == null
                         ? "--"
                         : formatNumber(
-                            overviewStats.max,
-                            currentOverviewMetricDecimals,
-                          )}
+                          overviewStats.max,
+                          currentOverviewMetricDecimals,
+                        )}
                     </h3>
                   </div>
                   <div
@@ -1029,21 +1097,15 @@ const Dashboard = () => {
                 </div>
 
                 {/* [CHỖ CHÈN INSIGHT TAB 1] */}
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
-                    }}
-                  >
-                    💡 INSIGHT TỔNG QUAN
+                {/* INSIGHT TAB 1 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <h4 style={{ margin: "0 0 15px 0", color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT TỔNG QUAN
+                    {loadingAI && <span style={{ fontSize: '12px', color: '#3B82F6', fontWeight: 'bold' }}> (Đang phân tích...)</span>}
                   </h4>
-                  <p style={{ margin: 0 }}>
-                    Dữ liệu ghi nhận mức độ ô nhiễm trung bình toàn quốc trong
-                    tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao
-                    hơn...
-                  </p>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT1 || "Đang thu thập tín hiệu dữ liệu..."}
+                  </pre>
                 </div>
 
                 <div
@@ -1157,203 +1219,36 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: "20px",
-                    marginBottom: "30px",
-                  }}
-                >
-                  {/* Hero Metric 1: TB Kỳ */}
-                  <div
-                    className="hover-card"
-                    style={{
-                      ...styles.kpiCard,
-                      gridColumn: "span 2",
-                      display: "flex",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      padding: "16px 20px",
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <span
-                        style={{
-                          ...styles.label,
-                          fontSize: "12px",
-                          color: "#64748B",
-                        }}
-                      >
-                        TRUNG BÌNH KỲ
-                      </span>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "baseline",
-                          gap: "12px",
-                          marginTop: "6px",
-                        }}
-                      >
-                        <h3
-                          style={{
-                            ...styles.kpiValue,
-                            fontSize: "36px",
-                            lineHeight: "1",
-                          }}
-                        >
-                          {trendStats.average == null
-                            ? "--"
-                            : formatNumber(trendStats.average, 0)}
-                        </h3>
-                        {trendStats.average != null && (
-                          <span
-                            style={{
-                              padding: "3px 8px",
-                              borderRadius: "10px",
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              backgroundColor: "#E0E7FF",
-                              color: "#4F46E5",
-                            }}
-                          >
-                            AQI Index
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        flexShrink: 0,
-                        width: "48px",
-                        height: "48px",
-                        borderRadius: "14px",
-                        background: "#EEF2FF",
-                        color: "#4F46E5",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 3v18h18" />
-                        <path d="M18 17V9" />
-                        <path d="M13 17V5" />
-                        <path d="M8 17v-3" />
-                      </svg>
-                    </div>
+                <div style={styles.kpiGrid(6)}>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>TB Kỳ</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {trendStats.average == null
+                        ? "--"
+                        : formatNumber(trendStats.average, 0)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Ngày vượt</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {trendStats.exceedDays}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Biến động</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {formatPercent(trendStats.volatility, 1)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Cao/Thấp</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "16px" }}>
+                      {formatNumber(trendStats.max, 0)} /{" "}
+                      {formatNumber(trendStats.min, 0)}
+                    </h3>
                   </div>
 
-                  {/* Hero Metric 2: Biến động */}
-                  <div
-                    className="hover-card"
-                    style={{
-                      ...styles.kpiCard,
-                      gridColumn: "span 2",
-                      display: "flex",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      padding: "16px 20px",
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <span
-                        style={{
-                          ...styles.label,
-                          fontSize: "12px",
-                          color: "#64748B",
-                        }}
-                      >
-                        MỨC ĐỘ BIẾN ĐỘNG
-                      </span>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "baseline",
-                          gap: "12px",
-                          marginTop: "6px",
-                        }}
-                      >
-                        <h3
-                          style={{
-                            ...styles.kpiValue,
-                            fontSize: "36px",
-                            lineHeight: "1",
-                          }}
-                        >
-                          {formatPercent(trendStats.volatility, 1)}
-                        </h3>
-                        <span
-                          style={{
-                            padding: "3px 8px",
-                            borderRadius: "10px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            backgroundColor: "#ECFDF5",
-                            color: "#059669",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            style={{
-                              display: "inline",
-                              marginRight: "4px",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-                            <polyline points="16 7 22 7 22 13" />
-                          </svg>
-                          Dao động
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        flexShrink: 0,
-                        width: "48px",
-                        height: "48px",
-                        borderRadius: "14px",
-                        background: "#ECFDF5",
-                        color: "#10B981",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Secondary Metric 1: Ngày vượt */}
+                  {/* Secondary Metric 2: Cao/Thấp */}
                   <div
                     className="hover-card"
                     style={{
@@ -1382,7 +1277,7 @@ const Dashboard = () => {
                           textOverflow: "ellipsis",
                         }}
                       >
-                        NGÀY VƯỢT
+                        CAO / THẤP
                       </span>
                       <div
                         style={{
@@ -1392,12 +1287,11 @@ const Dashboard = () => {
                           justifyContent: "center",
                           width: "32px",
                           height: "32px",
-                          background: "#FEF2F2",
+                          background: "#F1F5F9",
                           borderRadius: "8px",
-                          color: "#EF4444",
+                          color: "#64748B",
                         }}
                       >
-                        {/* ĐÃ THÊM VIEWBOX VÀO ĐÂY */}
                         <svg
                           width="18"
                           height="18"
@@ -1408,9 +1302,92 @@ const Dashboard = () => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
-                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                          <line x1="12" y1="9" x2="12" y2="13" />
-                          <line x1="12" y1="17" x2="12.01" y2="17" />
+                          <polyline points="7 15 12 20 17 15" />
+                          <polyline points="7 9 12 4 17 9" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "6px",
+                        marginTop: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <h3 style={{ ...styles.kpiValue, fontSize: "22px" }}>
+                        {formatNumber(trendStats.max, 0)}
+                      </h3>
+                      <span
+                        style={{
+                          color: "#94A3B8",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        / {formatNumber(trendStats.min, 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Secondary Metric 3: Dự báo đỉnh */}
+                  <div
+                    className="hover-card"
+                    style={{
+                      ...styles.kpiCard,
+                      padding: "16px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                        gap: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...styles.label,
+                          fontSize: "11px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        DỰ BÁO ĐỈNH
+                      </span>
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          background: "#FFFBEB",
+                          borderRadius: "8px",
+                          color: "#D97706",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <circle cx="12" cy="12" r="6" />
+                          <circle cx="12" cy="12" r="2" />
                         </svg>
                       </div>
                     </div>
@@ -1421,7 +1398,7 @@ const Dashboard = () => {
                         marginTop: "8px",
                       }}
                     >
-                      {trendStats.exceedDays}
+                      {formatNumber(trendStats.forecastPeak, 0)}
                     </h3>
                   </div>
 
@@ -1650,20 +1627,19 @@ const Dashboard = () => {
                   </div>
                 </div>
                 {/* [CHỖ CHÈN INSIGHT TAB 2] */}
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
-                    }}
-                  >
-                    💡 INSIGHT BIẾN ĐỘNG
-                  </h4>
-                  <p style={{ margin: 0 }}>
-                    Xu hướng chỉ số có dấu hiệu tăng mạnh vào các khung giờ cao
-                    điểm (7h-9h). Dự báo trong 24h tới...
-                  </p>
+                {/* INSIGHT TAB 2 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT XU HƯỚNG
+                    </h4>
+                    <button onClick={() => handleCallAI('trend')} disabled={loadingAI} style={{ padding: '8px 16px', background: loadingAI ? '#94A3B8' : '#0F172A', color: '#fff', border: 'none', borderRadius: '8px', cursor: loadingAI ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                      {loadingAI ? "Đang quét dữ liệu..." : "Phân tích xu hướng"}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT2}
+                  </pre>
                 </div>
 
                 <div style={styles.chartGrid}>
@@ -1942,20 +1918,19 @@ const Dashboard = () => {
                 </div>
 
                 {/* [CHỖ CHÈN INSIGHT TAB 3] */}
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
-                    }}
-                  >
-                    💡 INSIGHT TƯƠNG QUAN
-                  </h4>
-                  <p style={{ margin: 0 }}>
-                    Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và
-                    AQI tại các khu vực đô thị lớn...
-                  </p>
+                {/* INSIGHT TAB 3 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT TƯƠNG QUAN
+                    </h4>
+                    <button onClick={() => handleCallAI('correlation')} disabled={loadingAI} style={{ padding: '8px 16px', background: loadingAI ? '#94A3B8' : '#0F172A', color: '#fff', border: 'none', borderRadius: '8px', cursor: loadingAI ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                      {loadingAI ? "Đang quét dữ liệu..." : "Phân tích tương quan"}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT3}
+                  </pre>
                 </div>
 
                 <div
