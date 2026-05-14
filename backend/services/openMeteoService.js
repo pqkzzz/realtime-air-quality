@@ -311,7 +311,8 @@ async function fetchStation(station) {
     `&longitude=${station.lon}` +
     `&hourly=${HOURLY_VARS}` +
     `&timezone=Asia%2FHo_Chi_Minh` +
-    `&forecast_days=1`; // chỉ lấy 24h tới để giảm payload
+    `&forecast_days=1` +
+    `&past_days=2`; // Lấy thêm 2 ngày quá khứ để tự động vá dữ liệu nếu server bị tắt
 
   const data = await httpGet(url);
 

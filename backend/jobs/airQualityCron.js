@@ -44,18 +44,16 @@ async function runFetchJob() {
       return;
     }
 
-    // 2. Lọc chỉ lấy reading của giờ hiện tại ± 1h để tránh insert quá nhiều
-    //    (Open Meteo trả về 24 giờ forecast, mình chỉ cần giờ gần nhất đã xảy ra)
+    // 2. Lọc: Chỉ lấy dữ liệu từ hiện tại trở về trước (Bỏ qua dự báo tương lai)
+    // Nhưng vẫn giữ lại toàn bộ quá khứ để tự động vá lỗ hổng dữ liệu
     const now = new Date();
-    const cutoff = new Date(now.getTime() - 60 * 60 * 1000); // 1 giờ trước
-
     const toInsert = readings.filter((r) => {
       const t = new Date(r.measured_at);
-      return t <= now && t >= cutoff;
+      return t <= now; // Chỉ lấy những gì đã hoặc đang xảy ra
     });
 
     console.log(
-      `[AQI Cron] 📦 Tổng readings fetch được: ${readings.length}, sẽ insert: ${toInsert.length}`,
+      `[AQI Cron] 📦 Fetch được ${readings.length} dòng (gồm cả dự báo). Sẽ lưu ${toInsert.length} dòng thực tế vào DB...`,
     );
 
     // 3. Insert vào DB (ON CONFLICT DO NOTHING)
