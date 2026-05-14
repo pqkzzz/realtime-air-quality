@@ -40,6 +40,41 @@ function parseTimeRange(query) {
 }
 
 // ─────────────────────────────────────────────
+// 0. FULL DATA (FOR LEGACY FRONTEND) – GET /api/air-quality/all
+// ─────────────────────────────────────────────
+exports.getAllData = async (req, res) => {
+  try {
+    const knex = require("../configs/db");
+    const fullData = await knex("air_quality_readings")
+      .select("*")
+      .orderBy("measured_at", "asc");
+
+    const formatted = fullData.map((row) => ({
+      province: row.station_name,
+      latitude: parseFloat(row.lat),
+      longitude: parseFloat(row.lon),
+      datetime: new Date(row.measured_at)
+        .toISOString()
+        .replace("T", " ")
+        .replace(".000Z", ""),
+      dateKey: new Date(row.measured_at).toISOString().split("T")[0],
+      pm2_5: row.pm2_5,
+      pm10: row.pm10,
+      carbon_monoxide: row.co,
+      nitrogen_dioxide: row.no2,
+      sulphur_dioxide: row.so2,
+      ozone: row.o3,
+      us_aqi: row.aqi,
+      european_aqi: row.european_aqi || row.aqi,
+    }));
+
+    return res.json(formatted);
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────
 // 1. TIME-SERIES  –  GET /api/air-quality/timeseries
 // ─────────────────────────────────────────────
 exports.getTimeSeries = async (req, res) => {

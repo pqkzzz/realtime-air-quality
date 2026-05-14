@@ -23,6 +23,7 @@ const ctrl = require("../controllers/airQualityController");
  *   → Dự báo AQI 7 ngày tới (daily)
  */
 
+router.get("/all", ctrl.getAllData);
 router.get("/latest", ctrl.getLatest);
 router.get("/stations", ctrl.getStations);
 router.get("/timeseries", ctrl.getTimeSeries);
