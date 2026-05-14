@@ -18,11 +18,15 @@ const ctrl = require("../controllers/airQualityController");
  * GET /api/air-quality/grouped
  *   → Dữ liệu được group
  *   Query: group_by, range|from+to, pollutant
+ *
+ * GET /api/air-quality/forecast
+ *   → Dự báo AQI 7 ngày tới (daily)
  */
 
 router.get("/latest", ctrl.getLatest);
 router.get("/stations", ctrl.getStations);
 router.get("/timeseries", ctrl.getTimeSeries);
 router.get("/grouped", ctrl.getGrouped);
+router.get("/forecast", ctrl.getForecast);
 
 module.exports = router;

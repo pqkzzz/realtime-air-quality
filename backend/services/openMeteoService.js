@@ -184,4 +184,82 @@ async function fetchAllStations() {
   return { readings, errors };
 }
 
-module.exports = { fetchAllStations, STATIONS, getAqiCategory };
+// ─────────────────────────────────────────────
+// Fetch daily forecasts for a station (aggregated from hourly)
+// ─────────────────────────────────────────────
+async function fetchStationForecast(station, days = 7) {
+  const url =
+    `https://air-quality-api.open-meteo.com/v1/air-quality` +
+    `?latitude=${station.lat}` +
+    `&longitude=${station.lon}` +
+    `&hourly=us_aqi,pm2_5,pm10` +
+    `&timezone=Asia%2FHo_Chi_Minh` +
+    `&forecast_days=${days}`;
+
+  const data = await httpGet(url);
+
+  if (!data.hourly || !data.hourly.time) {
+    throw new Error(`[${station.id}] Response không có trường hourly`);
+  }
+
+  const h = data.hourly;
+  const dailyMap = {};
+
+  for (let i = 0; i < h.time.length; i++) {
+    const dateStr = h.time[i].split("T")[0]; // YYYY-MM-DD
+    if (!dailyMap[dateStr]) {
+      dailyMap[dateStr] = {
+        station_id: station.id,
+        forecast_date: dateStr,
+        aqi: 0,
+        pm2_5: 0,
+        pm10: 0,
+      };
+    }
+
+    // Lấy giá trị lớn nhất trong ngày làm đại diện (daily max)
+    if (h.us_aqi?.[i] > dailyMap[dateStr].aqi) {
+      dailyMap[dateStr].aqi = h.us_aqi[i];
+    }
+    if (h.pm2_5?.[i] > dailyMap[dateStr].pm2_5) {
+      dailyMap[dateStr].pm2_5 = h.pm2_5[i];
+    }
+    if (h.pm10?.[i] > dailyMap[dateStr].pm10) {
+      dailyMap[dateStr].pm10 = h.pm10[i];
+    }
+  }
+
+  return Object.values(dailyMap).map((d) => ({
+    ...d,
+    aqi_category: getAqiCategory(d.aqi),
+  }));
+}
+
+// ─────────────────────────────────────────────
+// Fetch daily forecasts for all stations
+// ─────────────────────────────────────────────
+async function fetchAllDailyForecasts(days = 7) {
+  const results = await Promise.allSettled(
+    STATIONS.map((s) => fetchStationForecast(s, days)),
+  );
+
+  const forecasts = [];
+  const errors = [];
+
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") {
+      forecasts.push(...r.value);
+    } else {
+      errors.push({ station: STATIONS[i].id, error: r.reason?.message });
+    }
+  });
+
+  return { forecasts, errors };
+}
+
+module.exports = {
+  fetchAllStations,
+  fetchAllDailyForecasts,
+  STATIONS,
+  getAqiCategory,
+};
