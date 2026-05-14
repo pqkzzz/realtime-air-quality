@@ -275,12 +275,12 @@ const KpiCard = ({
     lineHeight: 1,
     ...(isGradient
       ? {
-          backgroundImage: valueColor,
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-          color: "transparent",
-        }
+        backgroundImage: valueColor,
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+        color: "transparent",
+      }
       : { color: isDark ? "#ffffff" : valueColor }),
   };
 
@@ -905,9 +905,9 @@ const Dashboard = () => {
                 row.hour !== undefined
                   ? Number(row.hour)
                   : parseInt(
-                      rawDatetime.split(/[ T]/)[1]?.split(":")[0] ?? "0",
-                      10,
-                    ),
+                    rawDatetime.split(/[ T]/)[1]?.split(":")[0] ?? "0",
+                    10,
+                  ),
               carbon_monoxide: Number(row.carbon_monoxide ?? row.co ?? 0),
               nitrogen_dioxide: Number(row.nitrogen_dioxide ?? 0),
               sulphur_dioxide: Number(row.sulphur_dioxide ?? 0),
@@ -1125,8 +1125,8 @@ const Dashboard = () => {
       ).size,
       exceedPct: values.length
         ? (values.filter((v) => v >= overviewMetricThreshold).length /
-            values.length) *
-          100
+          values.length) *
+        100
         : 0,
     };
   }, [overviewRows, selectedOverviewMetric, overviewMetricThreshold]);
@@ -1137,9 +1137,9 @@ const Dashboard = () => {
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-            getMonday(effectiveTrendDate),
-            addDays(getMonday(effectiveTrendDate), 6),
-          ]
+          getMonday(effectiveTrendDate),
+          addDays(getMonday(effectiveTrendDate), 6),
+        ]
         : [currentDate, currentDate];
     const sK = formatDateKey(startDate);
     const eK = formatDateKey(endDate);
@@ -1575,23 +1575,23 @@ const Dashboard = () => {
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Top 8 Ô nhiễm nhất</h3>
+                    <h3 style={styles.chartTitle}>Top 5 Ô nhiễm nhất</h3>
                     <HorizontalBarChart
                       rows={overviewRows}
                       metricKey={selectedOverviewMetric}
                       metricLabel={currentOverviewMetricLabel}
-                      topN={8}
+                      topN={5}
                       order="desc"
                       barColor="#EF4444"
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Top 8 Trong lành nhất</h3>
+                    <h3 style={styles.chartTitle}>Top 5 Trong lành nhất</h3>
                     <HorizontalBarChart
                       rows={overviewRows}
                       metricKey={selectedOverviewMetric}
                       metricLabel={currentOverviewMetricLabel}
-                      topN={8}
+                      topN={5}
                       order="asc"
                       barColor="#10B981"
                     />
