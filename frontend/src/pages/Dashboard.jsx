@@ -199,6 +199,9 @@ const Dashboard = () => {
   const [data, setData] = useState([]);
   const [loadError, setLoadError] = useState("");
 
+  // Dữ liệu dự báo từ API
+  const [forecastData, setForecastData] = useState([]);
+
   // Load state từ LocalStorage hoặc gán mặc định
   const [activeTab, setActiveTab] = useState(() =>
     getSavedState("activeTab", "overview"),
@@ -253,21 +256,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const loadCsv = async () => {
+    const loadDataFromApi = async () => {
       try {
-        const csvUrls = [
-          "/aqi_vietnam_april2026.csv",
-          "./aqi_vietnam_april2026.csv",
-        ];
-        let response = null;
-        for (const url of csvUrls) {
-          response = await fetch(url);
-          if (response.ok) break;
-          response = null;
-        }
-        if (!response) throw new Error("CSV not found");
-        const text = await response.text();
-        const parsed = parseCsv(text);
+        const response = await fetch("/api/air-quality/all");
+        if (!response.ok) throw new Error("API error: " + response.statusText);
+        const parsed = await response.json();
+        
         if (!cancelled) {
           setData(parsed);
           setLoadError("");
@@ -282,10 +276,27 @@ const Dashboard = () => {
           }
         }
       } catch (error) {
-        if (!cancelled) setLoadError("Không tải được dữ liệu CSV");
+        if (!cancelled) setLoadError("Không tải được dữ liệu từ API");
       }
     };
-    loadCsv();
+
+    const loadForecast = async () => {
+      try {
+        const response = await fetch("/api/air-quality/forecast");
+        if (response.ok) {
+          const res = await response.json();
+          if (!cancelled && res.success) {
+            setForecastData(res.data);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi tải dự báo:", err);
+      }
+    };
+
+    loadDataFromApi();
+    loadForecast();
+
     return () => {
       cancelled = true;
     };
