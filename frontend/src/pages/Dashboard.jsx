@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useGemini } from '../hooks/useGemini';
 import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
@@ -659,7 +660,74 @@ const Dashboard = () => {
       <line x1="3" y1="18" x2="21" y2="18"></line>
     </svg>
   );
+// === GEMINI AI ENGINE ===
+  const { generateInsight, loadingAI } = useGemini();
+  const [insightT1, setInsightT1] = useState("");
+  const [insightT2, setInsightT2] = useState("- Nhận xét chính: Chưa phân tích\n- Lý do: Bấm 'Phân tích xu hướng' để bắt đầu.\n- Hành động gợi ý: Chờ lệnh.");
+  const [insightT3, setInsightT3] = useState("- Nhận xét chính: Chưa phân tích\n- Lý do: Bấm 'Phân tích tương quan' để bắt đầu.\n- Hành động gợi ý: Chờ lệnh.");
 
+// Tự động phân tích Tab 1 khi data đã sẵn sàng
+  useEffect(() => {
+    const fetchTab1Auto = async () => {
+      if (activeTab === 'overview' && overviewRows.length > 0 && insightT1 === "") {
+        
+       
+        const provinceGroups = {};
+        overviewRows.forEach(row => {
+          if (!provinceGroups[row.province]) {
+            provinceGroups[row.province] = { totalAqi: 0, count: 0 };
+          }
+          provinceGroups[row.province].totalAqi += row.us_aqi;
+          provinceGroups[row.province].count += 1;
+        });
+
+   
+        const aggregatedList = Object.keys(provinceGroups).map(prov => ({
+          province: prov,
+          avg_aqi: provinceGroups[prov].totalAqi / provinceGroups[prov].count
+        })).sort((a, b) => b.avg_aqi - a.avg_aqi);
+
+    
+        const payloadT1 = {
+          trung_binh_chung: overviewStats.average?.toFixed(1) || "0",
+          so_tinh_vuot_nguong: overviewStats.warningProvinces || 0,
+          top_3_o_nhiem: aggregatedList.slice(0, 3).map(r => r.province), 
+          top_3_trong_lanh: [...aggregatedList].reverse().slice(0, 3).map(r => r.province) 
+        };
+
+        const result = await generateInsight(payloadT1);
+        setInsightT1(result);
+      }
+    };
+    fetchTab1Auto();
+  }, [activeTab, overviewRows.length, insightT1]);
+
+  // Hàm gọi AI cho Tab 2 và Tab 3 (Dùng nút bấm)
+  const handleCallAI = async (tab) => {
+    if (tab === 'trend') {
+      const payloadT2 = {
+        average: trendStats.average?.toFixed(1),
+        max: trendStats.max,
+        min: trendStats.min,
+        exceedDays: trendStats.exceedDays,
+        volatility: trendStats.volatility?.toFixed(1) + "%",
+        riskHours: trendStats.riskHours
+      };
+      const result = await generateInsight(payloadT2);
+      setInsightT2(result);
+    } 
+    else if (tab === 'correlation') {
+      const payloadT3 = {
+        bien_Y: CORRELATION_Y_METRICS[selectedCorrelationY]?.label,
+        bien_X: CORRELATION_X_METRICS[selectedCorrelationX]?.label,
+        he_so_Pearson: correlationStats.pearson?.toFixed(2),
+        thanh_phan_chu_dao: correlationStats.dominantComponent
+      };
+      const result = await generateInsight(payloadT3);
+      setInsightT3(result);
+    }
+  };
+  // ==========================
   return (
     <div style={styles.app}>
       <style>
@@ -882,20 +950,15 @@ const Dashboard = () => {
                 </div>
 
                 {/* [CHỖ CHÈN INSIGHT TAB 1] */}
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
-                    }}
-                  >
-                    💡 INSIGHT TỔNG QUAN
+                {/* INSIGHT TAB 1 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <h4 style={{ margin: "0 0 15px 0", color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT TỔNG QUAN
+                    {loadingAI && <span style={{ fontSize: '12px', color: '#3B82F6', fontWeight: 'bold' }}> (Đang phân tích...)</span>}
                   </h4>
-                  <p style={{ margin: 0 }}>
-                    Dữ liệu ghi nhận mức độ ô nhiễm trung bình toàn quốc trong
-                    tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao hơn...
-                  </p>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT1 || "Đang thu thập tín hiệu dữ liệu..."}
+                  </pre>
                 </div>
 
                 <div
@@ -1052,20 +1115,19 @@ const Dashboard = () => {
                 </div>
 
                 {/* [CHỖ CHÈN INSIGHT TAB 2] */}
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
-                    }}
-                  >
-                    💡 INSIGHT BIẾN ĐỘNG
-                  </h4>
-                  <p style={{ margin: 0 }}>
-                    Xu hướng chỉ số có dấu hiệu tăng mạnh vào các khung giờ cao
-                    điểm (7h-9h). Dự báo trong 24h tới...
-                  </p>
+                {/* INSIGHT TAB 2 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT XU HƯỚNG
+                    </h4>
+                    <button onClick={() => handleCallAI('trend')} disabled={loadingAI} style={{ padding: '8px 16px', background: loadingAI ? '#94A3B8' : '#0F172A', color: '#fff', border: 'none', borderRadius: '8px', cursor: loadingAI ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                      {loadingAI ? "Đang quét dữ liệu..." : "Phân tích xu hướng"}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT2}
+                  </pre>
                 </div>
 
                 <div style={styles.chartGrid}>
@@ -1180,20 +1242,19 @@ const Dashboard = () => {
                 </div>
 
                 {/* [CHỖ CHÈN INSIGHT TAB 3] */}
-                <div className="insight-box" style={{ marginBottom: "30px" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 10px 0",
-                      color: "#3B82F6",
-                      fontWeight: "800",
-                    }}
-                  >
-                    💡 INSIGHT TƯƠNG QUAN
-                  </h4>
-                  <p style={{ margin: 0 }}>
-                    Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và AQI
-                    tại các khu vực đô thị lớn...
-                  </p>
+                {/* INSIGHT TAB 3 */}
+                <div className="insight-box" style={{ marginBottom: "30px", background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: "#0F172A", fontWeight: "800", display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>✨</span> AI INSIGHT TƯƠNG QUAN
+                    </h4>
+                    <button onClick={() => handleCallAI('correlation')} disabled={loadingAI} style={{ padding: '8px 16px', background: loadingAI ? '#94A3B8' : '#0F172A', color: '#fff', border: 'none', borderRadius: '8px', cursor: loadingAI ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                      {loadingAI ? "Đang quét dữ liệu..." : "Phân tích tương quan"}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+                    {insightT3}
+                  </pre>
                 </div>
 
                 <div
