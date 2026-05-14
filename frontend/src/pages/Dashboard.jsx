@@ -255,16 +255,28 @@ const KpiCard = ({
   progress,
   description,
   isHero = false,
-  bgColor = "#ffffff",
-  valueColor = "#0F172A",
+  bgColor = "#2c5f8a",
+  valueColor = "#ffffff",
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  // Các thẻ có ý nghĩa tiêu cực/cảnh báo cần để chữ đỏ
+  const isWarningCard = [
+    "CAO NHẤT",
+    "SỐ TỈNH BÁO ĐỘNG",
+    "VƯỢT NGƯỠNG WHO",
+    "GIỜ RỦI RO",
+    "NGÀY VƯỢT"
+  ].includes(label.toUpperCase());
+                     
   const isDark = bgColor !== "#ffffff";
+  const actualBgColor = isDark ? bgColor : "#ffffff";
+
   const bgGradient = isDark
-    ? `linear-gradient(135deg, #1E293B 0%, #334155 100%)`
+    ? `linear-gradient(135deg, ${actualBgColor} 0%, #1e4566 100%)`
     : `linear-gradient(135deg, #ffffff 60%, ${accent}08 100%)`;
-  const lblColor = isDark ? "#94A3B8" : "#64748B";
-  const iconBg = isDark ? "rgba(255,255,255,0.1)" : `${accent}15`;
+
+  const lblColor = isDark ? "rgba(255,255,255,0.7)" : "#64748B";
+  const iconBg = isDark ? "rgba(255,255,255,0.15)" : `${accent}15`;
   const iconColor = isDark ? "#ffffff" : accent;
   const isGradient = valueColor.includes("gradient");
 
@@ -281,7 +293,7 @@ const KpiCard = ({
         backgroundClip: "text",
         color: "transparent",
       }
-      : { color: isDark ? "#ffffff" : valueColor }),
+      : { color: isWarningCard ? "#EF4444" : (isDark ? "#ffffff" : valueColor) }),
   };
 
   return (
@@ -490,7 +502,6 @@ const OverviewKpiGrid = ({ overviewStats, currentOverviewMetricDecimals }) => {
         }
         status={aqiLabel}
         statusColor={aqiColor}
-        bgColor="#1E293B"
         accent="#3B82F6"
         icon={
           <svg
@@ -513,10 +524,9 @@ const OverviewKpiGrid = ({ overviewStats, currentOverviewMetricDecimals }) => {
             ? "--"
             : formatNumber(overviewStats.max, currentOverviewMetricDecimals)
         }
-        accent="#EF4444"
+        accent="#3B82F6"
         status="Đỉnh ô nhiễm"
         statusColor="#EF4444"
-        valueColor="linear-gradient(135deg, #FF416C, #FF4B2B)"
         icon={
           <svg
             viewBox="0 0 24 24"
@@ -538,11 +548,10 @@ const OverviewKpiGrid = ({ overviewStats, currentOverviewMetricDecimals }) => {
             ? "--"
             : overviewStats.warningProvinces
         }
-        unit="/ 63"
+        unit="/ 34"
         accent="#3B82F6"
         status="Cảnh báo"
-        statusColor="#3B82F6"
-        valueColor="linear-gradient(135deg, #36D1DC, #5B86E5)"
+        statusColor="rgba(239, 68, 68, 1)"
         icon={
           <svg
             viewBox="0 0 24 24"
@@ -565,9 +574,8 @@ const OverviewKpiGrid = ({ overviewStats, currentOverviewMetricDecimals }) => {
             ? "--"
             : formatPercent(overviewStats.exceedPct, 1)
         }
-        accent="#8B5CF6"
+        accent="#3B82F6"
         progress={overviewStats.exceedPct ?? 0}
-        valueColor="linear-gradient(135deg, #8E2DE2, #4A00E0)"
         icon={
           <svg
             viewBox="0 0 24 24"
@@ -606,7 +614,6 @@ const TrendKpiGrid = ({ trendStats }) => (
             : formatNumber(trendStats.average, 0)
         }
         unit="AQI"
-        bgColor="#1E293B"
         accent="#3B82F6"
         status={
           trendStats.average != null ? getAqiMeta(trendStats.average).label : ""
@@ -638,10 +645,9 @@ const TrendKpiGrid = ({ trendStats }) => (
         isHero
         label="MỨC ĐỘ BIẾN ĐỘNG"
         value={formatPercent(trendStats.volatility, 1)}
-        accent="#10B981"
+        accent="#3B82F6"
         status="Dao động"
         statusColor="#10B981"
-        valueColor="linear-gradient(135deg, #10B981, #059669)"
         icon={
           <svg
             viewBox="0 0 24 24"
@@ -660,10 +666,9 @@ const TrendKpiGrid = ({ trendStats }) => (
       label="NGÀY VƯỢT"
       value={trendStats.exceedDays ?? "--"}
       unit="ngày"
-      accent="#EF4444"
+      accent="#3B82F6"
       status={trendStats.exceedDays > 0 ? "Vượt ngưỡng" : "An toàn"}
-      statusColor={trendStats.exceedDays > 0 ? "#EF4444" : "#10B981"}
-      valueColor="linear-gradient(135deg, #FF416C, #FF4B2B)"
+      statusColor={trendStats.exceedDays > 0 ? "rgba(239, 68, 68, 1)" : "#10B981"}
       icon={
         <svg
           viewBox="0 0 24 24"
@@ -704,10 +709,9 @@ const TrendKpiGrid = ({ trendStats }) => (
     <KpiCard
       label="DỰ BÁO ĐỈNH"
       value={formatNumber(trendStats.forecastPeak, 0)}
-      accent="#D97706"
+      accent="#3B82F6"
       status="Tuyến tính"
       statusColor="#D97706"
-      valueColor="linear-gradient(135deg, #F2994A, #F2C94C)"
       icon={
         <svg
           viewBox="0 0 24 24"
@@ -727,9 +731,8 @@ const TrendKpiGrid = ({ trendStats }) => (
       label="GIỜ RỦI RO"
       value={trendStats.riskHours ?? "--"}
       unit="giờ"
-      accent="#EF4444"
+      accent="#3B82F6"
       description="AQI ≥ 100"
-      valueColor="linear-gradient(135deg, #BE123C, #EF4444)"
       icon={
         <svg
           viewBox="0 0 24 24"
@@ -778,7 +781,6 @@ const CorrelationKpiGrid = ({ correlationStats }) => {
         isHero
         label="HỆ SỐ TƯƠNG QUAN PEARSON"
         value={pearson == null ? "--" : formatNumber(pearson, 3)}
-        bgColor="#1E293B"
         accent="#3B82F6"
         status={strength}
         statusColor={strengthColor}
@@ -804,10 +806,9 @@ const CorrelationKpiGrid = ({ correlationStats }) => {
         isHero
         label="THÀNH PHẦN CHÍNH GÂY Ô NHIỄM"
         value={correlationStats.dominantComponent ?? "--"}
-        accent="#EA580C"
+        accent="#3B82F6"
         status="Chủ đạo"
         statusColor="#EA580C"
-        valueColor="linear-gradient(135deg, #F2994A, #F2C94C)"
         icon={
           <svg
             viewBox="0 0 24 24"
@@ -1378,7 +1379,11 @@ const Dashboard = () => {
           .topbar-pill-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
           
           /* Box AI Insight */
-          .insight-box { background: #F8FAFC; border: 1px dashed #3B82F6; border-radius: 16px; padding: 20px; marginBottom: 30px; color: #64748B; font-size: 14px; }
+          .insight-box { background: #2c5f8a; border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 20px; marginBottom: 30px; color: #ffffff; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+          .insight-box.negative { color: #ff4d4d !important; border-color: #ff4d4d; }
+          .insight-box pre { color: inherit !important; }
+          .insight-title { color: #ffffff !important; display: flex; alignItems: center; gap: 8px; font-weight: 800; margin-bottom: 12px; }
+          .insight-box.negative .insight-title { color: #ff4d4d !important; }
         `}
       </style>
 
@@ -1484,47 +1489,28 @@ const Dashboard = () => {
 
                 {/* KHỐI AI INSIGHT GIỮ NGUYÊN LOGIC CŨ */}
                 <div
-                  className="insight-box"
+                  className={`insight-box ${insightT1.toLowerCase().includes("ô nhiễm") || insightT1.toLowerCase().includes("xấu") || insightT1.toLowerCase().includes("nguy hiểm") ? "negative" : ""}`}
                   style={{
                     marginBottom: "25px",
-                    background: "#F8FAFC",
-                    border: "1px solid #E2E8F0",
+                    background: "#2c5f8a",
+                    border: "1px solid rgba(255,255,255,0.2)",
                     borderRadius: "16px",
                     padding: "16px",
                   }}
                 >
-                  <h4
-                    style={{
-                      margin: "0 0 12px 0",
-                      color: "#0F172A",
-                      fontWeight: "800",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <span style={{ fontSize: "16px" }}>✨</span> AI INSIGHT TỔNG
-                    QUAN
+                  <h4 className="insight-title" style={{ fontSize: "14px", margin: 0 }}>
+                    <span style={{ fontSize: "16px" }}>✨</span> AI INSIGHT TỔNG QUAN
                     {loadingAI && (
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          color: "#3B82F6",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {" "}
-                        (Đang phân tích...)
+                      <span style={{ fontSize: "12px", color: "#60A5FA", fontWeight: "bold" }}>
+                        {" "} (Đang phân tích...)
                       </span>
                     )}
                   </h4>
                   <pre
                     style={{
-                      margin: 0,
+                      margin: "12px 0 0 0",
                       whiteSpace: "pre-wrap",
                       fontFamily: "inherit",
-                      color: "#475569",
                       fontSize: "13px",
                       lineHeight: "1.5",
                     }}
@@ -1648,11 +1634,11 @@ const Dashboard = () => {
 
                 {/* KHỐI AI INSIGHT GIỮ NGUYÊN LOGIC CŨ */}
                 <div
-                  className="insight-box"
+                  className={`insight-box ${insightT2.toLowerCase().includes("ô nhiễm") || insightT2.toLowerCase().includes("xấu") || insightT2.toLowerCase().includes("nguy hiểm") ? "negative" : ""}`}
                   style={{
                     marginBottom: "25px",
-                    background: "#F8FAFC",
-                    border: "1px solid #E2E8F0",
+                    background: "#2c5f8a",
+                    border: "1px solid rgba(255,255,255,0.2)",
                     borderRadius: "16px",
                     padding: "20px",
                   }}
@@ -1665,26 +1651,16 @@ const Dashboard = () => {
                       marginBottom: "15px",
                     }}
                   >
-                    <h4
-                      style={{
-                        margin: 0,
-                        color: "#0F172A",
-                        fontWeight: "800",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <span style={{ fontSize: "18px" }}>✨</span> AI INSIGHT XU
-                      HƯỚNG
+                    <h4 className="insight-title" style={{ margin: 0 }}>
+                      <span style={{ fontSize: "18px" }}>✨</span> AI INSIGHT XU HƯỚNG
                     </h4>
                     <button
                       onClick={() => handleCallAI("trend")}
                       disabled={loadingAI}
                       style={{
                         padding: "8px 16px",
-                        background: loadingAI ? "#94A3B8" : "#0F172A",
-                        color: "#fff",
+                        background: loadingAI ? "rgba(255,255,255,0.2)" : "#ffffff",
+                        color: loadingAI ? "#cbd5e1" : "#2c5f8a",
                         border: "none",
                         borderRadius: "8px",
                         cursor: loadingAI ? "not-allowed" : "pointer",
@@ -1699,7 +1675,6 @@ const Dashboard = () => {
                       margin: 0,
                       whiteSpace: "pre-wrap",
                       fontFamily: "inherit",
-                      color: "#475569",
                       fontSize: "14px",
                       lineHeight: "1.6",
                     }}
@@ -1808,11 +1783,11 @@ const Dashboard = () => {
 
                 {/* KHỐI AI INSIGHT GIỮ NGUYÊN LOGIC CŨ */}
                 <div
-                  className="insight-box"
+                  className={`insight-box ${insightT3.toLowerCase().includes("ô nhiễm") || insightT3.toLowerCase().includes("xấu") || insightT3.toLowerCase().includes("nguy hiểm") || insightT3.toLowerCase().includes("mạnh") ? "negative" : ""}`}
                   style={{
                     marginBottom: "25px",
-                    background: "#F8FAFC",
-                    border: "1px solid #E2E8F0",
+                    background: "#2c5f8a",
+                    border: "1px solid rgba(255,255,255,0.2)",
                     borderRadius: "16px",
                     padding: "20px",
                   }}
@@ -1825,26 +1800,16 @@ const Dashboard = () => {
                       marginBottom: "15px",
                     }}
                   >
-                    <h4
-                      style={{
-                        margin: 0,
-                        color: "#0F172A",
-                        fontWeight: "800",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <span style={{ fontSize: "18px" }}>✨</span> AI INSIGHT
-                      TƯƠNG QUAN
+                    <h4 className="insight-title" style={{ margin: 0 }}>
+                      <span style={{ fontSize: "18px" }}>✨</span> AI INSIGHT TƯƠNG QUAN
                     </h4>
                     <button
                       onClick={() => handleCallAI("correlation")}
                       disabled={loadingAI}
                       style={{
                         padding: "8px 16px",
-                        background: loadingAI ? "#94A3B8" : "#0F172A",
-                        color: "#fff",
+                        background: loadingAI ? "rgba(255,255,255,0.2)" : "#ffffff",
+                        color: loadingAI ? "#cbd5e1" : "#2c5f8a",
                         border: "none",
                         borderRadius: "8px",
                         cursor: loadingAI ? "not-allowed" : "pointer",
@@ -1859,7 +1824,6 @@ const Dashboard = () => {
                       margin: 0,
                       whiteSpace: "pre-wrap",
                       fontFamily: "inherit",
-                      color: "#475569",
                       fontSize: "14px",
                       lineHeight: "1.6",
                     }}
