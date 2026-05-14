@@ -1,6 +1,7 @@
 const knex = require("../configs/db");
 
 const TABLE = "air_quality_readings";
+const FORECAST_TABLE = "air_quality_forecasts";
 
 /**
  * Chèn một batch readings, bỏ qua nếu đã tồn tại (ON CONFLICT DO NOTHING)
@@ -125,6 +126,46 @@ async function deleteOlderThan(days = 90) {
     .delete();
 }
 
+/**
+ * Upsert forecasts — chèn hoặc cập nhật nếu đã tồn tại forecast_date cho trạm
+ * @param {Array} forecasts
+ */
+async function upsertForecasts(forecasts) {
+  if (!forecasts.length) return 0;
+
+  const result = await knex(FORECAST_TABLE)
+    .insert(
+      forecasts.map((f) => ({
+        station_id: f.station_id,
+        forecast_date: f.forecast_date,
+        aqi: f.aqi,
+        aqi_category: f.aqi_category,
+        pm2_5: f.pm2_5,
+        pm10: f.pm10,
+        fetched_at: knex.fn.now(),
+      })),
+    )
+    .onConflict(["station_id", "forecast_date"])
+    .merge(); // UPSERT: update all columns on conflict
+
+  return result.rowCount ?? result.length ?? 0;
+}
+
+/**
+ * Lấy danh sách dự báo
+ */
+async function getForecasts({ stationIds, from, to }) {
+  let query = knex(FORECAST_TABLE)
+    .select("*")
+    .whereIn("station_id", stationIds)
+    .orderBy("forecast_date", "asc");
+
+  if (from) query = query.where("forecast_date", ">=", from);
+  if (to) query = query.where("forecast_date", "<=", to);
+
+  return query;
+}
+
 module.exports = {
   insertReadings,
   getLatest,
@@ -132,4 +173,6 @@ module.exports = {
   getGroupedByDistrict,
   getGroupedByHour,
   deleteOlderThan,
+  upsertForecasts,
+  getForecasts,
 };
