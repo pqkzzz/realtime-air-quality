@@ -33,7 +33,7 @@ const TimeSeriesLineChart = ({ rows = [], granularity = "day", threshold = 100 }
       return Object.keys(hourly)
         .sort((a, b) => Number(a) - Number(b))
         .map((h) => ({
-          name: hourly[h].hour,
+          name: `${h}h`,
           us_aqi: hourly[h].us_aqi.length ? hourly[h].us_aqi.reduce((a, b) => a + b, 0) / hourly[h].us_aqi.length : null,
           pm2_5: hourly[h].pm2_5.length ? hourly[h].pm2_5.reduce((a, b) => a + b, 0) / hourly[h].pm2_5.length : null,
           pm10: hourly[h].pm10.length ? hourly[h].pm10.reduce((a, b) => a + b, 0) / hourly[h].pm10.length : null,
@@ -84,6 +84,14 @@ const TimeSeriesLineChart = ({ rows = [], granularity = "day", threshold = 100 }
             tickLine={false}
             tick={{ fill: "#64748B", fontSize: 12 }}
             dy={10}
+            label={{ 
+              value: granularity === "day" ? "Giờ" : "Ngày", 
+              position: "insideBottomRight", 
+              offset: -5,
+              fill: "#64748B",
+              fontSize: 12,
+              fontWeight: 600
+            }}
           />
           <YAxis
             axisLine={false}
