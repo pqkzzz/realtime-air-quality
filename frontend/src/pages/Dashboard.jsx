@@ -1710,7 +1710,12 @@ const Dashboard = () => {
 
                 <div style={styles.chartGrid}>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Diễn biến chuỗi thời gian</h3>
+                    <h3 style={styles.chartTitle}>
+                      Diễn biến chuỗi thời gian{" "}
+                      {selectedTrendProvince
+                        ? `(${selectedTrendProvince})`
+                        : "(Trung bình Toàn quốc)"}
+                    </h3>
                     <TimeSeriesLineChart
                       rows={trendRows}
                       granularity={selectedTrendGranularity}
