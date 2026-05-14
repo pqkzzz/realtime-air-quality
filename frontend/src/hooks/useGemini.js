@@ -14,9 +14,8 @@ Quy tắc TỐI THƯỢNG:
 3. Luôn viết theo cấu trúc 3 dòng:
 - Nhận xét chính: [Nội dung]
 - Lý do: [Nội dung từ dữ liệu]
-- Hành động gợi ý: [Nội dung]
-4. Văn phong ngắn gọn, tối đa 3-5 câu.
-5. Nếu dữ liệu ít, hãy nói thẳng là chưa đủ tín hiệu.
+- Hành động gợi ý: [Nội dung], hãy thật tập trung vào những hành động gợi ý bảo vệ sức khỏe cực kỳ thiết thực, cụ thể cho người dân khi xem monitor tab 1
+4. Văn phong ngắn gọn, tối đa 7-8 câu.
 `;
 
 export const useGemini = () => {
