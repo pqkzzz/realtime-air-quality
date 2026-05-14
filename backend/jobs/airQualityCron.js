@@ -8,9 +8,13 @@
  */
 
 const cron = require("node-cron");
-const { fetchAllStations } = require("../services/openMeteoService");
+const {
+  fetchAllStations,
+  fetchAllDailyForecasts,
+} = require("../services/openMeteoService");
 const {
   insertReadings,
+  upsertForecasts,
   deleteOlderThan,
 } = require("../models/airQualityModel");
 
@@ -79,6 +83,38 @@ async function runFetchJob() {
 }
 
 // ─────────────────────────────────────────────
+// Forecast job — fetch 7-day forecast và upsert vào DB
+// Chạy lúc 8:00 sáng mỗi ngày
+// ─────────────────────────────────────────────
+async function runForecastJob() {
+  const startedAt = new Date();
+  console.log(`[AQI Forecast] ▶ Bắt đầu fetch lúc ${startedAt.toISOString()}`);
+
+  try {
+    const { forecasts, errors } = await fetchAllDailyForecasts(7);
+
+    if (errors.length) {
+      errors.forEach((e) =>
+        console.warn(`[AQI Forecast] ⚠ Trạm ${e.station} lỗi: ${e.error}`),
+      );
+    }
+
+    if (!forecasts.length) {
+      console.warn("[AQI Forecast] ⚠ Không có dữ liệu forecast để lưu");
+      return;
+    }
+
+    const inserted = await upsertForecasts(forecasts);
+    console.log(`[AQI Forecast] ✅ Đã upsert: ${inserted} dòng forecast`);
+  } catch (err) {
+    console.error(`[AQI Forecast] ✖ Lỗi job:`, err.message);
+  } finally {
+    const elapsed = ((Date.now() - startedAt.getTime()) / 1000).toFixed(1);
+    console.log(`[AQI Forecast] ⏱ Hoàn thành sau ${elapsed}s`);
+  }
+}
+
+// ─────────────────────────────────────────────
 // Cleanup job — xóa data cũ hơn 90 ngày, chạy lúc 2:00 sáng mỗi ngày
 // ─────────────────────────────────────────────
 async function runCleanupJob() {
@@ -104,13 +140,20 @@ function startCronJobs() {
     timezone: "Asia/Ho_Chi_Minh",
   });
 
+  // Forecast: 8:00 AM mỗi ngày
+  cron.schedule("0 8 * * *", runForecastJob, {
+    timezone: "Asia/Ho_Chi_Minh",
+  });
+
   console.log("[AQI Cron] ✅ Đã đăng ký cron jobs:");
   console.log("  - Fetch data : mỗi giờ lúc :05 (Asia/Ho_Chi_Minh)");
   console.log("  - Cleanup    : 02:00 AM hàng ngày");
+  console.log("  - Forecast   : 08:00 AM hàng ngày");
 
   // Chạy ngay lần đầu khi server khởi động (không cần đợi đến :05)
-  console.log("[AQI Cron] 🚀 Chạy fetch lần đầu ngay lúc khởi động...");
+  console.log("[AQI Cron] 🚀 Chạy fetch và forecast lần đầu ngay lúc khởi động...");
   runFetchJob();
+  runForecastJob();
 }
 
 module.exports = { startCronJobs, runFetchJob };

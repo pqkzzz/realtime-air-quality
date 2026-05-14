@@ -10,6 +10,7 @@ const {
   getTimeSeries: getTimeSeriesFromModel,
   getGroupedByDistrict,
   getGroupedByHour,
+  getForecasts: getForecastsFromModel,
 } = require("../models/airQualityModel");
 
 // ─────────────────────────────────────────────
@@ -321,7 +322,62 @@ exports.getLatest = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
-// 4. STATIONS LIST  –  GET /api/air-quality/stations
+// 4. DAILY FORECAST  –  GET /api/air-quality/forecast
+// ─────────────────────────────────────────────
+exports.getForecast = async (req, res) => {
+  try {
+    const stationIdsQuery = req.query.station_id
+      ? req.query.station_id.split(",").map((s) => s.trim())
+      : STATIONS.map((s) => s.id);
+
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+
+    const forecasts = await getForecastsFromModel({
+      stationIds: stationIdsQuery,
+      from,
+      to,
+    });
+
+    // Group by station for better readability
+    const result = {};
+    STATIONS.filter((s) => stationIdsQuery.includes(s.id)).forEach((s) => {
+      result[s.id] = {
+        station_id: s.id,
+        station_name: s.name,
+        district: s.district,
+        forecasts: [],
+      };
+    });
+
+    forecasts.forEach((f) => {
+      if (result[f.station_id]) {
+        result[f.station_id].forecasts.push({
+          date: new Date(f.forecast_date).toISOString().split("T")[0],
+          aqi: f.aqi,
+          category: f.aqi_category,
+          pm2_5: f.pm2_5,
+          pm10: f.pm10,
+          updated_at: f.fetched_at,
+        });
+      }
+    });
+
+    return res.json({
+      success: true,
+      meta: {
+        total_stations: Object.keys(result).length,
+        forecast_days: 7,
+      },
+      data: Object.values(result),
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────
+// 5. STATIONS LIST  –  GET /api/air-quality/stations
 // ─────────────────────────────────────────────
 exports.getStations = (_req, res) => {
   res.json({ success: true, total: STATIONS.length, stations: STATIONS });
