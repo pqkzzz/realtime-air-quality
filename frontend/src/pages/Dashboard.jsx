@@ -246,42 +246,6 @@ const Dashboard = () => {
     () => getSavedState("selectedCorrelationEndDate", "2026-04-30"),
   );
 
-  // Hàm Lưu Mặc Định (Last Login Style)
-  const saveDefaultConfig = () => {
-    localStorage.setItem("activeTab", activeTab);
-    localStorage.setItem(
-      "selectedOverviewProvinces",
-      JSON.stringify(selectedOverviewProvinces),
-    );
-    localStorage.setItem("selectedOverviewMetric", selectedOverviewMetric);
-    localStorage.setItem(
-      "selectedOverviewStartDate",
-      selectedOverviewStartDate,
-    );
-    localStorage.setItem("selectedOverviewEndDate", selectedOverviewEndDate);
-    localStorage.setItem("selectedOverviewHour", selectedOverviewHour);
-    localStorage.setItem("selectedTrendProvince", selectedTrendProvince);
-    localStorage.setItem("selectedTrendGranularity", selectedTrendGranularity);
-    localStorage.setItem("selectedTrendDate", selectedTrendDate);
-    localStorage.setItem("selectedCorrelationY", selectedCorrelationY);
-    localStorage.setItem("selectedCorrelationX", selectedCorrelationX);
-    localStorage.setItem(
-      "selectedCorrelationProvince",
-      selectedCorrelationProvince,
-    );
-    localStorage.setItem(
-      "selectedCorrelationStartDate",
-      selectedCorrelationStartDate,
-    );
-    localStorage.setItem(
-      "selectedCorrelationEndDate",
-      selectedCorrelationEndDate,
-    );
-    alert(
-      "✅ Đã cấu hình Dashboard hiện tại làm mặc định cho lần truy cập sau!",
-    );
-  };
-
   useEffect(() => {
     let cancelled = false;
     const loadCsv = async () => {
@@ -326,9 +290,52 @@ const Dashboard = () => {
   const styles = {
     app: {
       display: "flex",
+      flexDirection: "column",
       minHeight: "100vh",
       backgroundColor: theme.bg,
       fontFamily: '"Inter", sans-serif',
+    },
+    topbar: {
+      background: theme.sidebar,
+      color: "#fff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0 40px",
+      height: "70px",
+      flexShrink: 0,
+      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
+    },
+    topbarLogo: {
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+    },
+    topbarTitle: {
+      fontSize: "18px",
+      fontWeight: "800",
+      letterSpacing: "-0.02em",
+      margin: 0,
+      lineHeight: 1.2,
+    },
+    topbarSub: {
+      fontSize: "11px",
+      color: "rgba(255,255,255,0.85)",
+      margin: 0,
+      letterSpacing: "0.04em",
+    },
+    topbarActions: {
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+    },
+    body: {
+      display: "flex",
+      flex: 1,
+      minHeight: 0,
     },
     main: {
       flex: 1,
@@ -476,8 +483,8 @@ const Dashboard = () => {
       ).size,
       exceedPct: values.length
         ? (values.filter((v) => v >= overviewMetricThreshold).length /
-            values.length) *
-          100
+          values.length) *
+        100
         : 0,
     };
   }, [overviewRows, selectedOverviewMetric, overviewMetricThreshold]);
@@ -488,9 +495,9 @@ const Dashboard = () => {
     const [startDate, endDate] =
       selectedTrendGranularity === "week"
         ? [
-            getMonday(selectedTrendDate),
-            addDays(getMonday(selectedTrendDate), 6),
-          ]
+          getMonday(selectedTrendDate),
+          addDays(getMonday(selectedTrendDate), 6),
+        ]
         : [currentDate, currentDate];
     const sK = formatDateKey(startDate);
     const eK = formatDateKey(endDate);
@@ -743,17 +750,39 @@ const Dashboard = () => {
           .sidebar-rail:hover .nav-rail-icon {
             transform: scale(1.1);
           }
-          .top-header {
-            height: 70px; background: #FFF; border-bottom: 1px solid #E2E8F0;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          .topbar-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 18px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
           }
-          .btn-save {
-            background: #04216a; color: white; border: none; padding: 10px 18px; border-radius: 10px;
-            font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px;
-            transition: all 0.2s; font-size: 13px; text-transform: uppercase;
+          .topbar-btn:hover { background: rgba(255,255,255,0.2); }
+          .topbar-pill-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
           }
-          .btn-save:hover { background: #3B82F6; transform: translateY(-1px); }
+          .topbar-pill-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.4);
+          }
           .insight-box {
             background: #F8FAFC; border: 1px dashed #3B82F6; border-radius: 16px;
             padding: 20px; marginBottom: 30px; color: #64748B; font-size: 14px;
@@ -761,487 +790,490 @@ const Dashboard = () => {
         `}
       </style>
 
-      {/* NAVIGATION RAIL */}
-      <div className="sidebar-rail">
-        {[
-          { tab: "overview", label: "Tổng quan", icon: <IconOverview /> },
-          { tab: "trend", label: "Xu hướng", icon: <IconTrend /> },
-          { tab: "correlation", label: "Tương quan", icon: <IconCorrelation /> },
-        ].map(({ tab, label, icon }) => (
-          <button
-            key={tab}
-            className={`nav-rail-btn${activeTab === tab ? " active" : ""}`}
-            onClick={() => setActiveTab(tab)}
-            title={label}
-          >
-            <span className="nav-rail-icon">{icon}</span>
-            <span className="nav-rail-label">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* --- MAIN AREA --- */}
-      <div style={styles.main}>
-        <div className="top-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "20px",
-                fontWeight: "800",
-                color: "#0F172A",
-                textTransform: "uppercase",
-              }}
-            >
-              {activeTab === "overview"
-                ? "Hiện trạng không gian"
-                : activeTab === "trend"
-                  ? "Phân tích biến động"
-                  : "Tương quan chỉ số"}
-            </h2>
+      {/* === TOPBAR === */}
+      <div style={styles.topbar}>
+        <div style={styles.topbarLogo}>
+          <div>
+            <p style={styles.topbarTitle}>Phân tích Chỉ số Chất lượng Không khí Việt Nam</p>
+            <p style={styles.topbarSub}>GVHD: Nguyễn Tiến Huy • KHTN • HCMUS • Năm 2025–2026</p>
           </div>
-          <button className="btn-save" onClick={saveDefaultConfig}>
-            <span>💾</span> Lưu mặc định
+        </div>
+        <div style={styles.topbarActions}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: "0.08em" }}>AQI HIỆN TẠI:</span>
+            {[{ max: 50, lbl: "Tốt", c: "#00C853" }, { max: 100, lbl: "Vừa", c: "#FFD600" }, { max: 150, lbl: "Nhạy cảm", c: "#FF6D00" }, { max: 200, lbl: "Xấu", c: "#D50000" }].map(({ lbl, c }) => (
+              <span key={lbl} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "700", color: "rgba(255,255,255,0.8)" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", backgroundColor: c, display: "inline-block" }} />{lbl}
+              </span>
+            ))}
+          </div>
+          <button className="topbar-pill-btn" onClick={() => window.location.reload()}>
+            <span style={{ fontSize: "14px" }}>⟳</span> Làm mới
           </button>
         </div>
+      </div>
 
-        <div style={styles.mainContent}>
-          {/* ================= TAB 1: OVERVIEW ================= */}
-          {activeTab === "overview" && (
-            <>
-              <div style={styles.kpiGrid(4)}>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Trung bình</span>
-                  <h3 style={styles.kpiValue}>
-                    {overviewStats.average == null
-                      ? "--"
-                      : formatNumber(
+      {/* === BODY = RAIL + MAIN === */}
+      <div style={styles.body}>
+        {/* NAVIGATION RAIL */}
+        <div className="sidebar-rail">
+          {[
+            { tab: "overview", label: "Tổng quan", icon: <IconOverview /> },
+            { tab: "trend", label: "Xu hướng", icon: <IconTrend /> },
+            { tab: "correlation", label: "Tương quan", icon: <IconCorrelation /> },
+          ].map(({ tab, label, icon }) => (
+            <button
+              key={tab}
+              className={`nav-rail-btn${activeTab === tab ? " active" : ""}`}
+              onClick={() => setActiveTab(tab)}
+              title={label}
+            >
+              <span className="nav-rail-icon">{icon}</span>
+              <span className="nav-rail-label">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* --- MAIN AREA --- */}
+        <div style={styles.main}>
+          <div style={styles.mainContent}>
+            {/* ================= TAB 1: OVERVIEW ================= */}
+            {activeTab === "overview" && (
+              <>
+                <div style={styles.kpiGrid(4)}>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Trung bình</span>
+                    <h3 style={styles.kpiValue}>
+                      {overviewStats.average == null
+                        ? "--"
+                        : formatNumber(
                           overviewStats.average,
                           currentOverviewMetricDecimals,
                         )}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Cao nhất</span>
-                  <h3 style={styles.kpiValue}>
-                    {overviewStats.max == null
-                      ? "--"
-                      : formatNumber(
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Cao nhất</span>
+                    <h3 style={styles.kpiValue}>
+                      {overviewStats.max == null
+                        ? "--"
+                        : formatNumber(
                           overviewStats.max,
                           currentOverviewMetricDecimals,
                         )}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Số tỉnh báo động</span>
-                  <h3 style={styles.kpiValue}>
-                    {overviewStats.warningProvinces == null
-                      ? "--"
-                      : overviewStats.warningProvinces}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Vượt chuẩn WHO</span>
-                  <h3 style={styles.kpiValue}>
-                    {overviewStats.exceedPct == null
-                      ? "--"
-                      : formatPercent(overviewStats.exceedPct, 1)}
-                  </h3>
-                </div>
-              </div>
-
-              {/* [CHỖ CHÈN INSIGHT TAB 1] */}
-              <div className="insight-box" style={{ marginBottom: "30px" }}>
-                <h4
-                  style={{
-                    margin: "0 0 10px 0",
-                    color: "#3B82F6",
-                    fontWeight: "800",
-                  }}
-                >
-                  💡 INSIGHT TỔNG QUAN
-                </h4>
-                <p style={{ margin: 0 }}>
-                  Dữ liệu ghi nhận mức độ ô nhiễm trung bình toàn quốc trong
-                  tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao hơn...
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.3fr 1fr",
-                  gap: "25px",
-                }}
-              >
-                <div
-                  className="hover-card"
-                  style={{
-                    ...styles.chartCard,
-                    gridRow: "span 2",
-                    padding: "12px",
-                  }}
-                >
-                  <h3
-                    style={{ ...styles.chartTitle, padding: "10px 0 0 15px" }}
-                  >
-                    Bản đồ phân bố không gian
-                  </h3>
-                  <BubbleMap
-                    overviewRows={overviewRows}
-                    selectedOverviewMetric={selectedOverviewMetric}
-                    overviewMetricThreshold={overviewMetricThreshold}
-                    currentOverviewMetricLabel={currentOverviewMetricLabel}
-                    currentOverviewMetricDecimals={
-                      currentOverviewMetricDecimals
-                    }
-                  />
-                </div>
-                <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Top 8 Ô nhiễm nhất</h3>
-                  <HorizontalBarChart
-                    rows={overviewRows}
-                    metricKey={selectedOverviewMetric}
-                    metricLabel={currentOverviewMetricLabel}
-                    topN={8}
-                    order="desc"
-                    barColor="#EF4444"
-                  />
-                </div>
-                <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Top 8 Trong lành nhất</h3>
-                  <HorizontalBarChart
-                    rows={overviewRows}
-                    metricKey={selectedOverviewMetric}
-                    metricLabel={currentOverviewMetricLabel}
-                    topN={8}
-                    order="asc"
-                    barColor="#10B981"
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ================= TAB 2: TREND ================= */}
-          {activeTab === "trend" && (
-            <>
-              <div style={styles.filterSection}>
-                <div style={styles.filterBox}>
-                  <span style={styles.label}>Chọn vùng</span>
-                  <select
-                    className="hover-input"
-                    value={selectedTrendProvince}
-                    onChange={(e) => setSelectedTrendProvince(e.target.value)}
-                    style={styles.select}
-                  >
-                    <option value="">Toàn quốc</option>
-                    {provinces.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={styles.filterBox}>
-                  <span style={styles.label}>Chế độ</span>
-                  <div style={styles.radioGroup}>
-                    <label style={styles.radioLabel}>
-                      <input
-                        type="radio"
-                        checked={selectedTrendGranularity === "day"}
-                        onChange={() => setSelectedTrendGranularity("day")}
-                      />{" "}
-                      Ngày
-                    </label>
-                    <label style={styles.radioLabel}>
-                      <input
-                        type="radio"
-                        checked={selectedTrendGranularity === "week"}
-                        onChange={() => setSelectedTrendGranularity("week")}
-                      />{" "}
-                      Tuần
-                    </label>
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Số tỉnh báo động</span>
+                    <h3 style={styles.kpiValue}>
+                      {overviewStats.warningProvinces == null
+                        ? "--"
+                        : overviewStats.warningProvinces}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Vượt chuẩn WHO</span>
+                    <h3 style={styles.kpiValue}>
+                      {overviewStats.exceedPct == null
+                        ? "--"
+                        : formatPercent(overviewStats.exceedPct, 1)}
+                    </h3>
                   </div>
                 </div>
-                <div style={styles.filterBox}>
-                  <span style={styles.label}>Mốc thời gian</span>
-                  <input
-                    className="hover-input"
-                    type="date"
-                    min={MIN_DATE}
-                    max={MAX_DATE}
-                    value={selectedTrendDate}
-                    onChange={(e) => setSelectedTrendDate(e.target.value)}
-                    style={styles.select}
-                  />
-                </div>
-              </div>
 
-              <div style={styles.kpiGrid(6)}>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>TB Kỳ</span>
-                  <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
-                    {trendStats.average == null
-                      ? "--"
-                      : formatNumber(trendStats.average, 0)}
-                  </h3>
+                {/* [CHỖ CHÈN INSIGHT TAB 1] */}
+                <div className="insight-box" style={{ marginBottom: "30px" }}>
+                  <h4
+                    style={{
+                      margin: "0 0 10px 0",
+                      color: "#3B82F6",
+                      fontWeight: "800",
+                    }}
+                  >
+                    💡 INSIGHT TỔNG QUAN
+                  </h4>
+                  <p style={{ margin: 0 }}>
+                    Dữ liệu ghi nhận mức độ ô nhiễm trung bình toàn quốc trong
+                    tháng 4/2026. Các tỉnh phía Bắc có xu hướng chỉ số cao hơn...
+                  </p>
                 </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Ngày vượt</span>
-                  <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
-                    {trendStats.exceedDays}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Biến động</span>
-                  <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
-                    {formatPercent(trendStats.volatility, 1)}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Cao/Thấp</span>
-                  <h3 style={{ ...styles.kpiValue, fontSize: "16px" }}>
-                    {formatNumber(trendStats.max, 0)} /{" "}
-                    {formatNumber(trendStats.min, 0)}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Dự báo đỉnh</span>
-                  <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
-                    {formatNumber(trendStats.forecastPeak, 0)}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Giờ rủi ro</span>
-                  <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
-                    {trendStats.riskHours}
-                  </h3>
-                </div>
-              </div>
 
-              {/* [CHỖ CHÈN INSIGHT TAB 2] */}
-              <div className="insight-box" style={{ marginBottom: "30px" }}>
-                <h4
-                  style={{
-                    margin: "0 0 10px 0",
-                    color: "#3B82F6",
-                    fontWeight: "800",
-                  }}
-                >
-                  💡 INSIGHT BIẾN ĐỘNG
-                </h4>
-                <p style={{ margin: 0 }}>
-                  Xu hướng chỉ số có dấu hiệu tăng mạnh vào các khung giờ cao
-                  điểm (7h-9h). Dự báo trong 24h tới...
-                </p>
-              </div>
-
-              <div style={styles.chartGrid}>
-                <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Diễn biến chuỗi thời gian</h3>
-                  <TimeSeriesLineChart
-                    rows={trendRows}
-                    granularity={selectedTrendGranularity}
-                    threshold={100}
-                  />
-                </div>
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "20px",
+                    gridTemplateColumns: "1.3fr 1fr",
+                    gap: "25px",
                   }}
                 >
-                  <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Dị thường (Boxplot)</h3>
-                    <AQIBoxPlot
-                      rows={trendRows}
-                      granularity={selectedTrendGranularity}
-                    />
-                  </div>
-                  <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Tần suất phân phối</h3>
-                    <HistogramChart histogramData={histogramData} />
-                  </div>
-                  <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Ma trận nhiệt độ</h3>
-                    <CalendarHeatmap
-                      data={trendRows}
-                      province={selectedTrendProvince}
-                      isCompact={true}
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ================= TAB 3: CORRELATION ================= */}
-          {activeTab === "correlation" && (
-            <>
-              <div style={styles.filterSection}>
-                <div style={styles.filterBox}>
-                  <span style={styles.label}>Chọn khu vực</span>
-                  <select
-                    className="hover-input"
-                    value={selectedCorrelationProvince}
-                    onChange={(e) =>
-                      setSelectedCorrelationProvince(e.target.value)
-                    }
-                    style={styles.select}
-                  >
-                    <option value="">Toàn quốc</option>
-                    {provinces.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={styles.filterBox}>
-                  <span style={styles.label}>Thời gian phân tích</span>
                   <div
+                    className="hover-card"
                     style={{
-                      display: "flex",
-                      gap: "10px",
-                      alignItems: "center",
+                      ...styles.chartCard,
+                      gridRow: "span 2",
+                      padding: "12px",
                     }}
                   >
-                    <input
-                      className="hover-input"
-                      type="date"
-                      value={selectedCorrelationStartDate}
-                      onChange={(e) =>
-                        setSelectedCorrelationStartDate(e.target.value)
-                      }
-                      style={styles.select}
-                    />
-                    <span>đến</span>
-                    <input
-                      className="hover-input"
-                      type="date"
-                      value={selectedCorrelationEndDate}
-                      onChange={(e) =>
-                        setSelectedCorrelationEndDate(e.target.value)
-                      }
-                      style={styles.select}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={styles.kpiGrid(2)}>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Hệ số tương quan Pearson</span>
-                  <h3 style={styles.kpiValue}>
-                    {correlationStats.pearson == null
-                      ? "--"
-                      : formatNumber(correlationStats.pearson, 3)}
-                  </h3>
-                </div>
-                <div className="hover-card" style={styles.kpiCard}>
-                  <span style={styles.label}>Thành phần chính gây ô nhiễm</span>
-                  <h3 style={styles.kpiValue}>
-                    {correlationStats.dominantComponent ?? "--"}
-                  </h3>
-                </div>
-              </div>
-
-              {/* [CHỖ CHÈN INSIGHT TAB 3] */}
-              <div className="insight-box" style={{ marginBottom: "30px" }}>
-                <h4
-                  style={{
-                    margin: "0 0 10px 0",
-                    color: "#3B82F6",
-                    fontWeight: "800",
-                  }}
-                >
-                  💡 INSIGHT TƯƠNG QUAN
-                </h4>
-                <p style={{ margin: 0 }}>
-                  Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và AQI
-                  tại các khu vực đô thị lớn...
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "25px",
-                }}
-              >
-                <div
-                  className="hover-card"
-                  style={{ ...styles.chartCard, minHeight: "500px" }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <h3 style={{ ...styles.chartTitle, margin: 0 }}>
-                      Đồ thị phân tán
+                    <h3
+                      style={{ ...styles.chartTitle, padding: "10px 0 0 15px" }}
+                    >
+                      Bản đồ phân bố không gian
                     </h3>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                      <select
-                        className="hover-input"
-                        value={selectedCorrelationY}
-                        onChange={(e) =>
-                          setSelectedCorrelationY(e.target.value)
-                        }
-                        style={{
-                          ...styles.select,
-                          padding: "5px 10px",
-                          fontSize: "12px",
-                        }}
-                      >
-                        <option value="us_aqi">Y: AQI</option>
-                        <option value="pm2_5">Y: PM2.5</option>
-                      </select>
-                      <select
-                        className="hover-input"
-                        value={selectedCorrelationX}
-                        onChange={(e) =>
-                          setSelectedCorrelationX(e.target.value)
-                        }
-                        style={{
-                          ...styles.select,
-                          padding: "5px 10px",
-                          fontSize: "12px",
-                        }}
-                      >
-                        <option value="carbon_monoxide">X: CO</option>
-                        <option value="nitrogen_dioxide">X: NO2</option>
-                        <option value="ozone">X: O3</option>
-                      </select>
+                    <BubbleMap
+                      overviewRows={overviewRows}
+                      selectedOverviewMetric={selectedOverviewMetric}
+                      overviewMetricThreshold={overviewMetricThreshold}
+                      currentOverviewMetricLabel={currentOverviewMetricLabel}
+                      currentOverviewMetricDecimals={
+                        currentOverviewMetricDecimals
+                      }
+                    />
+                  </div>
+                  <div className="hover-card" style={styles.chartCard}>
+                    <h3 style={styles.chartTitle}>Top 8 Ô nhiễm nhất</h3>
+                    <HorizontalBarChart
+                      rows={overviewRows}
+                      metricKey={selectedOverviewMetric}
+                      metricLabel={currentOverviewMetricLabel}
+                      topN={8}
+                      order="desc"
+                      barColor="#EF4444"
+                    />
+                  </div>
+                  <div className="hover-card" style={styles.chartCard}>
+                    <h3 style={styles.chartTitle}>Top 8 Trong lành nhất</h3>
+                    <HorizontalBarChart
+                      rows={overviewRows}
+                      metricKey={selectedOverviewMetric}
+                      metricLabel={currentOverviewMetricLabel}
+                      topN={8}
+                      order="asc"
+                      barColor="#10B981"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ================= TAB 2: TREND ================= */}
+            {activeTab === "trend" && (
+              <>
+                <div style={styles.filterSection}>
+                  <div style={styles.filterBox}>
+                    <span style={styles.label}>Chọn vùng</span>
+                    <select
+                      className="hover-input"
+                      value={selectedTrendProvince}
+                      onChange={(e) => setSelectedTrendProvince(e.target.value)}
+                      style={styles.select}
+                    >
+                      <option value="">Toàn quốc</option>
+                      {provinces.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={styles.filterBox}>
+                    <span style={styles.label}>Chế độ</span>
+                    <div style={styles.radioGroup}>
+                      <label style={styles.radioLabel}>
+                        <input
+                          type="radio"
+                          checked={selectedTrendGranularity === "day"}
+                          onChange={() => setSelectedTrendGranularity("day")}
+                        />{" "}
+                        Ngày
+                      </label>
+                      <label style={styles.radioLabel}>
+                        <input
+                          type="radio"
+                          checked={selectedTrendGranularity === "week"}
+                          onChange={() => setSelectedTrendGranularity("week")}
+                        />{" "}
+                        Tuần
+                      </label>
                     </div>
                   </div>
-                  <ScatterPlot
-                    rows={correlationRows}
-                    xKey={selectedCorrelationX}
-                    xLabel={CORRELATION_X_METRICS[selectedCorrelationX]?.label}
-                    yKey={selectedCorrelationY}
-                    yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label}
-                  />
+                  <div style={styles.filterBox}>
+                    <span style={styles.label}>Mốc thời gian</span>
+                    <input
+                      className="hover-input"
+                      type="date"
+                      min={MIN_DATE}
+                      max={MAX_DATE}
+                      value={selectedTrendDate}
+                      onChange={(e) => setSelectedTrendDate(e.target.value)}
+                      style={styles.select}
+                    />
+                  </div>
                 </div>
-                <div className="hover-card" style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Cấu trúc khí thải (Radar)</h3>
-                  <RadarChart
-                    rows={correlationRows}
-                    selectedY={selectedCorrelationY}
-                    yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label}
-                    yThreshold={100}
-                    allXMetrics={CORRELATION_X_METRICS}
-                    areaLabel={selectedCorrelationProvince || "Toàn quốc"}
-                  />
+
+                <div style={styles.kpiGrid(6)}>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>TB Kỳ</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {trendStats.average == null
+                        ? "--"
+                        : formatNumber(trendStats.average, 0)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Ngày vượt</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {trendStats.exceedDays}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Biến động</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {formatPercent(trendStats.volatility, 1)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Cao/Thấp</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "16px" }}>
+                      {formatNumber(trendStats.max, 0)} /{" "}
+                      {formatNumber(trendStats.min, 0)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Dự báo đỉnh</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {formatNumber(trendStats.forecastPeak, 0)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Giờ rủi ro</span>
+                    <h3 style={{ ...styles.kpiValue, fontSize: "20px" }}>
+                      {trendStats.riskHours}
+                    </h3>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+
+                {/* [CHỖ CHÈN INSIGHT TAB 2] */}
+                <div className="insight-box" style={{ marginBottom: "30px" }}>
+                  <h4
+                    style={{
+                      margin: "0 0 10px 0",
+                      color: "#3B82F6",
+                      fontWeight: "800",
+                    }}
+                  >
+                    💡 INSIGHT BIẾN ĐỘNG
+                  </h4>
+                  <p style={{ margin: 0 }}>
+                    Xu hướng chỉ số có dấu hiệu tăng mạnh vào các khung giờ cao
+                    điểm (7h-9h). Dự báo trong 24h tới...
+                  </p>
+                </div>
+
+                <div style={styles.chartGrid}>
+                  <div className="hover-card" style={styles.chartCard}>
+                    <h3 style={styles.chartTitle}>Diễn biến chuỗi thời gian</h3>
+                    <TimeSeriesLineChart
+                      rows={trendRows}
+                      granularity={selectedTrendGranularity}
+                      threshold={100}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      gap: "20px",
+                    }}
+                  >
+                    <div className="hover-card" style={styles.chartCard}>
+                      <h3 style={styles.chartTitle}>Dị thường (Boxplot)</h3>
+                      <AQIBoxPlot
+                        rows={trendRows}
+                        granularity={selectedTrendGranularity}
+                      />
+                    </div>
+                    <div className="hover-card" style={styles.chartCard}>
+                      <h3 style={styles.chartTitle}>Tần suất phân phối</h3>
+                      <HistogramChart histogramData={histogramData} />
+                    </div>
+                    <div className="hover-card" style={styles.chartCard}>
+                      <h3 style={styles.chartTitle}>Ma trận nhiệt độ</h3>
+                      <CalendarHeatmap
+                        data={trendRows}
+                        province={selectedTrendProvince}
+                        isCompact={true}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ================= TAB 3: CORRELATION ================= */}
+            {activeTab === "correlation" && (
+              <>
+                <div style={styles.filterSection}>
+                  <div style={styles.filterBox}>
+                    <span style={styles.label}>Chọn khu vực</span>
+                    <select
+                      className="hover-input"
+                      value={selectedCorrelationProvince}
+                      onChange={(e) =>
+                        setSelectedCorrelationProvince(e.target.value)
+                      }
+                      style={styles.select}
+                    >
+                      <option value="">Toàn quốc</option>
+                      {provinces.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={styles.filterBox}>
+                    <span style={styles.label}>Thời gian phân tích</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <input
+                        className="hover-input"
+                        type="date"
+                        value={selectedCorrelationStartDate}
+                        onChange={(e) =>
+                          setSelectedCorrelationStartDate(e.target.value)
+                        }
+                        style={styles.select}
+                      />
+                      <span>đến</span>
+                      <input
+                        className="hover-input"
+                        type="date"
+                        value={selectedCorrelationEndDate}
+                        onChange={(e) =>
+                          setSelectedCorrelationEndDate(e.target.value)
+                        }
+                        style={styles.select}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.kpiGrid(2)}>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Hệ số tương quan Pearson</span>
+                    <h3 style={styles.kpiValue}>
+                      {correlationStats.pearson == null
+                        ? "--"
+                        : formatNumber(correlationStats.pearson, 3)}
+                    </h3>
+                  </div>
+                  <div className="hover-card" style={styles.kpiCard}>
+                    <span style={styles.label}>Thành phần chính gây ô nhiễm</span>
+                    <h3 style={styles.kpiValue}>
+                      {correlationStats.dominantComponent ?? "--"}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* [CHỖ CHÈN INSIGHT TAB 3] */}
+                <div className="insight-box" style={{ marginBottom: "30px" }}>
+                  <h4
+                    style={{
+                      margin: "0 0 10px 0",
+                      color: "#3B82F6",
+                      fontWeight: "800",
+                    }}
+                  >
+                    💡 INSIGHT TƯƠNG QUAN
+                  </h4>
+                  <p style={{ margin: 0 }}>
+                    Kết quả cho thấy mối liên hệ mật thiết giữa nồng độ CO và AQI
+                    tại các khu vực đô thị lớn...
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "25px",
+                  }}
+                >
+                  <div
+                    className="hover-card"
+                    style={{ ...styles.chartCard, minHeight: "500px" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <h3 style={{ ...styles.chartTitle, margin: 0 }}>
+                        Đồ thị phân tán
+                      </h3>
+                      <div style={{ display: "flex", gap: "10px" }}>
+                        <select
+                          className="hover-input"
+                          value={selectedCorrelationY}
+                          onChange={(e) =>
+                            setSelectedCorrelationY(e.target.value)
+                          }
+                          style={{
+                            ...styles.select,
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <option value="us_aqi">Y: AQI</option>
+                          <option value="pm2_5">Y: PM2.5</option>
+                        </select>
+                        <select
+                          className="hover-input"
+                          value={selectedCorrelationX}
+                          onChange={(e) =>
+                            setSelectedCorrelationX(e.target.value)
+                          }
+                          style={{
+                            ...styles.select,
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <option value="carbon_monoxide">X: CO</option>
+                          <option value="nitrogen_dioxide">X: NO2</option>
+                          <option value="ozone">X: O3</option>
+                        </select>
+                      </div>
+                    </div>
+                    <ScatterPlot
+                      rows={correlationRows}
+                      xKey={selectedCorrelationX}
+                      xLabel={CORRELATION_X_METRICS[selectedCorrelationX]?.label}
+                      yKey={selectedCorrelationY}
+                      yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label}
+                    />
+                  </div>
+                  <div className="hover-card" style={styles.chartCard}>
+                    <h3 style={styles.chartTitle}>Cấu trúc khí thải (Radar)</h3>
+                    <RadarChart
+                      rows={correlationRows}
+                      selectedY={selectedCorrelationY}
+                      yLabel={CORRELATION_Y_METRICS[selectedCorrelationY]?.label}
+                      yThreshold={100}
+                      allXMetrics={CORRELATION_X_METRICS}
+                      areaLabel={selectedCorrelationProvince || "Toàn quốc"}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
