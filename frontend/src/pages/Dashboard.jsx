@@ -878,9 +878,7 @@ const Dashboard = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3000/api/air-quality/all",
-        );
+        const response = await fetch("/api/air-quality/all");
         if (!response.ok) throw new Error("API chưa sẵn sàng hoặc lỗi server");
 
         const result = await response.json();
@@ -888,11 +886,8 @@ const Dashboard = () => {
         if (!cancelled && result.length > 0) {
           const mappedData = result.map((row) => {
             const rawDatetime = row.datetime ?? "";
-            const dateKey =
-              row.dateKey ??
-              (rawDatetime.includes("T")
-                ? rawDatetime.slice(0, 10)
-                : rawDatetime.slice(0, 10));
+            const rawDateKey = row.dateKey || (rawDatetime ? rawDatetime.slice(0, 10) : "");
+            const dateKey = rawDateKey.includes("T") ? rawDateKey.split("T")[0] : rawDateKey;
 
             return {
               ...row,
@@ -901,13 +896,7 @@ const Dashboard = () => {
               longitude: Number(row.longitude ?? 0),
               datetime: rawDatetime,
               dateKey,
-              hour:
-                row.hour !== undefined
-                  ? Number(row.hour)
-                  : parseInt(
-                    rawDatetime.split(/[ T]/)[1]?.split(":")[0] ?? "0",
-                    10,
-                  ),
+              hour: row.hour !== undefined ? Number(row.hour) : parseInt(rawDatetime.split(/[ T]/)[1]?.split(":")[0] ?? "12", 10),
               carbon_monoxide: Number(row.carbon_monoxide ?? row.co ?? 0),
               nitrogen_dioxide: Number(row.nitrogen_dioxide ?? 0),
               sulphur_dioxide: Number(row.sulphur_dioxide ?? 0),
@@ -1749,8 +1738,10 @@ const Dashboard = () => {
                     <div className="hover-card" style={styles.chartCard}>
                       <h3 style={styles.chartTitle}>Ma trận nhiệt độ</h3>
                       <CalendarHeatmap
-                        data={trendRows}
+                        data={data}
                         province={selectedTrendProvince}
+                        selectedDate={effectiveTrendDate}
+                        onDateSelect={setHeatmapSelectedDate}
                         isCompact={true}
                       />
                     </div>
