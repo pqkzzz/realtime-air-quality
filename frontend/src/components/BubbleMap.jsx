@@ -7,6 +7,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
+// QUAN TRỌNG: Đảm bảo dòng này luôn ở trên cùng
 import "leaflet/dist/leaflet.css";
 
 // ── Bảng màu chuẩn VN_AQI & CÂU NHẮC NHỞ TƯƠNG ỨNG ──────────────────────────
@@ -141,7 +142,6 @@ const BubbleMap = ({
   overviewMetricThreshold,
   currentOverviewMetricLabel,
   currentOverviewMetricDecimals,
-  insightText,
 }) => {
   const [currentZoom, setCurrentZoom] = useState(5.5);
   const handleZoomChange = useCallback((z) => setCurrentZoom(z), []);
@@ -165,10 +165,6 @@ const BubbleMap = ({
     }));
   }, [overviewRows, selectedOverviewMetric]);
 
-  const finalInsightText =
-    insightText ||
-    "Dựa trên dữ liệu quan trắc, phần lớn các khu vực đang hiển thị mức độ ô nhiễm dao động. Các điểm chấm đỏ (Xấu) và tím (Rất Xấu) tập trung nhiều ở khu vực trung tâm và khu công nghiệp. Cần chú ý theo dõi.";
-
   return (
     <div
       style={{
@@ -185,7 +181,8 @@ const BubbleMap = ({
       }}
     >
       <style>{`
-        .leaflet-container { background: #F8FAFC !important; height: 100% !important; width: 100% !important; }
+        /* Thêm z-index: 1 vào leaflet-container để giới hạn không cho nó tràn lên đè Header */
+        .leaflet-container { background: #F8FAFC !important; height: 100% !important; width: 100% !important; z-index: 1 !important; }
         .aqi-tooltip .leaflet-tooltip {
           background: transparent !important;
           border: none !important;
@@ -195,7 +192,8 @@ const BubbleMap = ({
         .aqi-tooltip .leaflet-tooltip::before { display: none !important; }
       `}</style>
 
-      <div style={{ flex: 1, position: "relative" }}>
+      {/* Đã thêm zIndex: 0 vào div này để chặn triệt để lỗi đè Layout */}
+      <div style={{ flex: 1, position: "relative", zIndex: 0 }}>
         <MapContainer
           center={[16.047079, 108.20623]}
           zoom={5.5}
@@ -215,7 +213,6 @@ const BubbleMap = ({
             const ratio = val / overviewMetricThreshold;
 
             const levelIndex = getLevel(ratio);
-            // Kéo thêm tham số message ra để xài
             const { fill, glow, label, message } = AQI_LEVELS[levelIndex];
 
             const base = val / (selectedOverviewMetric === "us_aqi" ? 10 : 4);
@@ -244,16 +241,16 @@ const BubbleMap = ({
                   <div
                     style={{
                       background: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(12px)",
+                      // backdropFilter: "blur(12px)", // <-- Đã bỏ blur đi cho đỡ lag (nếu có yêu cầu)
                       border: `1px solid ${glow}66`,
                       borderRadius: 12,
                       padding: "12px",
-                      minWidth: 160, // Nới rộng hộp một chút để chứa đoạn text thoải mái hơn
+                      minWidth: 160,
                       maxWidth: 200,
                       textAlign: "center",
                       boxShadow: `0 8px 24px rgba(0,0,0,0.12), 0 0 10px ${fill}22`,
                       fontFamily: "'Inter', sans-serif",
-                      whiteSpace: "normal", // Ép text được tự động xuống dòng nếu quá dài
+                      whiteSpace: "normal",
                     }}
                   >
                     <div
@@ -315,7 +312,7 @@ const BubbleMap = ({
                         color: "#475569",
                         fontWeight: 500,
                         lineHeight: 1.4,
-                        borderTop: `1px dashed #E2E8F0`, // Có 1 vạch đứt phân cách nhẹ
+                        borderTop: `1px dashed #E2E8F0`,
                         paddingTop: 8,
                       }}
                     >
@@ -329,57 +326,6 @@ const BubbleMap = ({
         </MapContainer>
 
         <Legend />
-
-        <div
-          style={{
-            position: "absolute",
-            bottom: 24,
-            left: 16,
-            zIndex: 1000,
-            background: "rgba(255, 255, 255, 0.92)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(59, 130, 246, 0.3)",
-            borderRadius: 12,
-            padding: "16px",
-            maxWidth: "280px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-            pointerEvents: "auto",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "8px",
-            }}
-          >
-            <span style={{ fontSize: "16px" }}>💡</span>
-            <h4
-              style={{
-                margin: 0,
-                fontSize: "12px",
-                color: "#3B82F6",
-                textTransform: "uppercase",
-                fontWeight: 800,
-                letterSpacing: "0.5px",
-              }}
-            >
-              Insight Không gian
-            </h4>
-          </div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "12px",
-              color: "#475569",
-              lineHeight: 1.6,
-              fontWeight: 500,
-            }}
-          >
-            {finalInsightText}
-          </p>
-        </div>
       </div>
     </div>
   );
