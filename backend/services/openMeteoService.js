@@ -350,27 +350,7 @@ async function fetchStation(station) {
 }
 
 // ─────────────────────────────────────────────
-// Fetch tất cả trạm — chạy song song, không fail cả batch nếu 1 trạm lỗi
-// ─────────────────────────────────────────────
-async function fetchAllStations() {
-  const results = await Promise.allSettled(STATIONS.map(fetchStation));
-
-  const readings = [];
-  const errors = [];
-
-  results.forEach((r, i) => {
-    if (r.status === "fulfilled") {
-      readings.push(...r.value);
-    } else {
-      errors.push({ station: STATIONS[i].id, error: r.reason?.message });
-    }
-  });
-
-  return { readings, errors };
-}
-
-// ─────────────────────────────────────────────
-// Fetch daily forecasts for a station (aggregated from hourly)
+// Fetch 1 trạm dự báo
 // ─────────────────────────────────────────────
 async function fetchStationForecast(station, days = 7) {
   const url =
@@ -391,7 +371,7 @@ async function fetchStationForecast(station, days = 7) {
   const dailyMap = {};
 
   for (let i = 0; i < h.time.length; i++) {
-    const dateStr = h.time[i].split("T")[0]; // YYYY-MM-DD
+    const dateStr = h.time[i].split("T")[0];
     if (!dailyMap[dateStr]) {
       dailyMap[dateStr] = {
         station_id: station.id,
@@ -402,7 +382,6 @@ async function fetchStationForecast(station, days = 7) {
       };
     }
 
-    // Lấy giá trị lớn nhất trong ngày làm đại diện (daily max)
     if (h.us_aqi?.[i] > dailyMap[dateStr].aqi) {
       dailyMap[dateStr].aqi = h.us_aqi[i];
     }
@@ -423,42 +402,58 @@ async function fetchStationForecast(station, days = 7) {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ─────────────────────────────────────────────
-// Fetch tất cả trạm — Chạy tuần tự có delay
+// Fetch tất cả trạm — Chạy song song theo cụm (Chunks) để tối ưu tốc độ & tránh rate limit
 // ─────────────────────────────────────────────
 async function fetchAllStations() {
   const readings = [];
   const errors = [];
+  const CHUNK_SIZE = 5; // Fetch 5 trạm cùng lúc
 
-  for (const station of STATIONS) {
-    try {
-      const data = await fetchStation(station);
-      readings.push(...data);
-    } catch (err) {
-      errors.push({ station: station.id, error: err.message });
+  for (let i = 0; i < STATIONS.length; i += CHUNK_SIZE) {
+    const chunk = STATIONS.slice(i, i + CHUNK_SIZE);
+    const results = await Promise.allSettled(chunk.map(fetchStation));
+
+    results.forEach((r, idx) => {
+      if (r.status === "fulfilled") {
+        readings.push(...r.value);
+      } else {
+        errors.push({ station: chunk[idx].id, error: r.reason?.message });
+      }
+    });
+
+    if (i + CHUNK_SIZE < STATIONS.length) {
+      await delay(300); // Nghỉ 300ms giữa các cụm
     }
-    // Nghỉ 200ms giữa mỗi lần gọi API (Chống DDoS / Rate Limit)
-    await delay(200);
   }
 
   return { readings, errors };
 }
 
 // ─────────────────────────────────────────────
-// Fetch daily forecasts for all stations — Chạy tuần tự
+// Fetch tất cả trạm — Chạy song song theo cụm cho Forecast
 // ─────────────────────────────────────────────
 async function fetchAllDailyForecasts(days = 7) {
   const forecasts = [];
   const errors = [];
+  const CHUNK_SIZE = 5;
 
-  for (const station of STATIONS) {
-    try {
-      const data = await fetchStationForecast(station, days);
-      forecasts.push(...data);
-    } catch (err) {
-      errors.push({ station: station.id, error: err.message });
+  for (let i = 0; i < STATIONS.length; i += CHUNK_SIZE) {
+    const chunk = STATIONS.slice(i, i + CHUNK_SIZE);
+    const results = await Promise.allSettled(
+      chunk.map((s) => fetchStationForecast(s, days)),
+    );
+
+    results.forEach((r, idx) => {
+      if (r.status === "fulfilled") {
+        forecasts.push(...r.value);
+      } else {
+        errors.push({ station: chunk[idx].id, error: r.reason?.message });
+      }
+    });
+
+    if (i + CHUNK_SIZE < STATIONS.length) {
+      await delay(300);
     }
-    // Nghỉ 200ms giữa mỗi lần gọi API
-    await delay(200);
   }
 
   return { forecasts, errors };

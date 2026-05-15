@@ -135,10 +135,12 @@ function startCronJobs() {
 
   console.log("[AQI Cron] ✅ Đã đăng ký lịch trình.");
 
-  // 2. Chạy ngay khi khởi động
-  // Chúng ta sẽ chạy runFetchJob() hiện tại để lấy dữ liệu realtime
-  runFetchJob();
-  runForecastJob();
+  // 2. Chạy ngay sau khi khởi động một chút để không làm chậm server lúc init
+  setTimeout(() => {
+    console.log("[AQI Cron] 🚀 Đang chạy fetch ban đầu trong background...");
+    runFetchJob();
+    runForecastJob();
+  }, 5000); // Đợi 5 giây sau khi server start mới bắt đầu fetch
 }
 
 module.exports = { startCronJobs, runFetchJob };
