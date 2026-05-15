@@ -11,52 +11,27 @@ import {
 
 const RadarChart = ({ 
   rows = [], 
-  selectedY, 
-  yLabel, 
-  yThreshold,
-  allXMetrics, // { key: { label, threshold } }
+  metrics,
   areaLabel = "Toàn quốc"
 }) => {
   const data = useMemo(() => {
-    if (!rows.length || !allXMetrics) return [];
+    if (!rows.length || !metrics) return [];
 
-    // Metrics to include: All X metrics + selected Y (if not already an X metric)
-    const metricsToShow = [
-      ...Object.entries(allXMetrics).map(([key, config]) => ({
-        key,
-        label: config.label,
-        threshold: config.threshold
-      }))
-    ];
-
-    // If selectedY (e.g. AQI) isn't in the X metrics, add it
-    if (!allXMetrics[selectedY]) {
-      metricsToShow.push({
-        key: selectedY,
-        label: yLabel,
-        threshold: yThreshold
-      });
-    }
-
-    return metricsToShow.map(metric => {
-      const values = rows.map(r => r[metric.key]).filter(Number.isFinite);
+    return Object.entries(metrics).map(([key, config]) => {
+      const values = rows.map(r => r[key]).filter(Number.isFinite);
       const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
       
       // Normalize to % of threshold (100 = threshold)
-      const normalizedValue = Math.min(150, (avg / metric.threshold) * 100);
+      const normalizedValue = Math.min(150, (avg / config.threshold) * 100);
 
       return {
-        subject: metric.label,
+        subject: config.label,
         fullMark: 150,
         value: normalizedValue,
         raw: avg
       };
     });
-  }, [rows, selectedY, yLabel, yThreshold, allXMetrics]);
-
-  // If we only have 2 axes, RadarChart renders a line. To make it a "Radar", let's include 
-  // the top 3 correlated metrics or just the selected pair + AQI if not already selected.
-  // Given the user said "X/Y pair", I will implement it such that it looks clean.
+  }, [rows, metrics]);
   
   if (!rows.length) {
     return (
