@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useGemini } from "../hooks/useGemini";
+
 import {
   MapContainer,
   TileLayer,
@@ -145,7 +147,28 @@ const BubbleMap = ({
 }) => {
   const [currentZoom, setCurrentZoom] = useState(5.5);
   const handleZoomChange = useCallback((z) => setCurrentZoom(z), []);
+  // === DÁN NGUYÊN CỤC NÀY VÀO ĐÂY NHÉ KHOA ===
+  const { generateInsight, loadingAI } = useGemini();
+  const [localInsight, setLocalInsight] = useState("");
+  const [selectedProv, setSelectedProv] = useState(null);
 
+  const handleAnalyzeProvince = async (row, val) => {
+    setSelectedProv({ name: row.province, aqi: val });
+    setLocalInsight(""); 
+
+    const customPrompt = `Bạn là chuyên gia môi trường bản địa. Hãy phân tích số liệu AQI là ${val.toFixed(1)} tại tỉnh ${row.province}. 
+    Yêu cầu: KHÔNG nhận xét máy móc theo khoảng số. HÃY dùng tri thức địa lý, đặc thù công nghiệp/giao thông/khí hậu của ${row.province} để giải thích. 
+    Trả về cấu trúc 4 dòng:
+    - Nhận xét chính: [Đánh giá ô nhiễm]
+    - Lý do chuyên sâu: [Đặc thù địa phương]
+    - Góc nhìn quản lý: [Kiểm tra nguồn phát thải nào]
+    - Lời khuyên người dân: [Hành động bảo vệ sức khỏe]
+    Tối đa 5 câu ngắn gọn.`;
+
+    const result = await generateInsight(customPrompt);
+    setLocalInsight(result);
+  };
+  // === KẾT THÚC CỤC CẦN DÁN ===
   const aggregatedData = useMemo(() => {
     const provinceMap = new Map();
     overviewRows.forEach((row) => {
@@ -224,6 +247,7 @@ const BubbleMap = ({
                 key={idx}
                 center={[row.latitude, row.longitude]}
                 radius={radius}
+                eventHandlers={{ click: () => handleAnalyzeProvince(row, val) }}
                 pathOptions={{
                   fillColor: fill,
                   color: glow,
@@ -326,6 +350,50 @@ const BubbleMap = ({
         </MapContainer>
 
         <Legend />
+        {/* === BẢNG AI INSIGHT CỦA KHOA === */}
+        {selectedProv && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 16,
+              left: 16, 
+              zIndex: 1000,
+              background: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(59, 130, 246, 0.2)",
+              borderRadius: 16,
+              padding: "16px 20px",
+              width: 340,
+              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1E3A8A", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "16px" }}>✨</span>
+                AI Insight: {selectedProv.name}
+              </h4>
+              <button
+                onClick={() => setSelectedProv(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, fontSize: "16px", color: "#64748B" }}
+              >
+                ✖
+              </button>
+            </div>
+
+            {loadingAI ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0" }}>
+                <span style={{ fontSize: "24px", display: "inline-block", marginBottom: 8 }}>⏳</span>
+                <span style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>AI đang phân tích...</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                {localInsight}
+              </div>
+            )}
+          </div>
+        )}
+        {/* === KẾT THÚC BẢNG AI === */}
       </div>
     </div>
   );
