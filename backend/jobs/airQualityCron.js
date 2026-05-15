@@ -21,6 +21,8 @@ const {
 // ─────────────────────────────────────────────
 // Core job logic — tách riêng để có thể gọi thủ công khi test
 // ─────────────────────────────────────────────
+let socketIo = null; // Biến local để lưu io instance
+
 async function runFetchJob() {
   const startedAt = new Date();
   console.log(`[AQI Cron] ▶ Bắt đầu fetch lúc ${startedAt.toISOString()}`);
@@ -59,6 +61,15 @@ async function runFetchJob() {
     // 3. Insert vào DB (ON CONFLICT DO NOTHING)
     const inserted = await insertReadings(toInsert);
     console.log(`[AQI Cron] ✅ Đã insert: ${inserted} dòng mới`);
+
+    // 4. Phát tín hiệu Socket.io nếu có dữ liệu mới hoặc thậm chí luôn phát để chắc chắn
+    if (socketIo) {
+      console.log("[AQI Cron] 📡 Đang phát tín hiệu cập nhật tới Dashboard...");
+      socketIo.emit("data-updated", {
+        type: "READINGS",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // 4. Log tóm tắt AQI theo trạm
     const summary = {};
@@ -104,6 +115,13 @@ async function runForecastJob() {
 
     const inserted = await upsertForecasts(forecasts);
     console.log(`[AQI Forecast] ✅ Đã upsert: ${inserted} dòng forecast`);
+
+    if (socketIo) {
+      socketIo.emit("data-updated", {
+        type: "FORECAST",
+        timestamp: new Date().toISOString(),
+      });
+    }
   } catch (err) {
     console.error(`[AQI Forecast] ✖ Lỗi job:`, err.message);
   } finally {
@@ -127,7 +145,8 @@ async function runCleanupJob() {
 // ─────────────────────────────────────────────
 // Đăng ký cron schedules
 // ─────────────────────────────────────────────
-function startCronJobs() {
+function startCronJobs(io) {
+  socketIo = io; // Lưu io vào biến toàn cục của module
   // 1. Giữ nguyên các lịch trình cũ
   cron.schedule("5 * * * *", runFetchJob, { timezone: "Asia/Ho_Chi_Minh" });
   cron.schedule("0 2 * * *", runCleanupJob, { timezone: "Asia/Ho_Chi_Minh" });

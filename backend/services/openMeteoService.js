@@ -277,8 +277,8 @@ function getAqiCategory(aqi) {
 function httpGet(url) {
   return new Promise((resolve, reject) => {
     const options = {
-      family: 4, // ← ép IPv4, bỏ qua IPv6 unreachable
-      timeout: 10000, // ← timeout 10s
+      family: 4,
+      timeout: 15000, // Tăng timeout lên 15s
     };
 
     https
@@ -287,9 +287,17 @@ function httpGet(url) {
         res.on("data", (chunk) => (raw += chunk));
         res.on("end", () => {
           try {
-            resolve(JSON.parse(raw));
+            const parsed = JSON.parse(raw);
+            if (res.statusCode !== 200) {
+              return reject(
+                new Error(
+                  `HTTP ${res.statusCode}: ${parsed.reason || parsed.message || raw}`
+                )
+              );
+            }
+            resolve(parsed);
           } catch (e) {
-            reject(new Error(`JSON parse error: ${e.message}`));
+            reject(new Error(`JSON parse error (Status ${res.statusCode}): ${raw.substring(0, 100)}`));
           }
         });
       })
@@ -299,6 +307,23 @@ function httpGet(url) {
       })
       .on("error", (e) => reject(new Error(`Request error: ${e.message}`)));
   });
+}
+
+/**
+ * Helper để gọi hàm với cơ chế Retry
+ */
+async function withRetry(fn, retries = 3, delayMs = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      const isRateLimit = err.message.includes("429") || err.message.includes("rate limit");
+      const waitTime = isRateLimit ? delayMs * 2 : delayMs; // Nếu bị rate limit thì đợi lâu hơn
+      console.warn(`⚠️ Lỗi: ${err.message}. Đang thử lại lần ${i + 1}/${retries} sau ${waitTime}ms...`);
+      await delay(waitTime);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -312,9 +337,9 @@ async function fetchStation(station) {
     `&hourly=${HOURLY_VARS}` +
     `&timezone=Asia%2FHo_Chi_Minh` +
     `&forecast_days=1` +
-    `&past_days=2`; // Lấy thêm 2 ngày quá khứ để tự động vá dữ liệu nếu server bị tắt
+    `&past_days=2`;
 
-  const data = await httpGet(url);
+  const data = await withRetry(() => httpGet(url));
 
   if (!data.hourly || !data.hourly.time) {
     throw new Error(`[${station.id}] Response không có trường hourly`);
@@ -361,7 +386,7 @@ async function fetchStationForecast(station, days = 7) {
     `&timezone=Asia%2FHo_Chi_Minh` +
     `&forecast_days=${days}`;
 
-  const data = await httpGet(url);
+  const data = await withRetry(() => httpGet(url));
 
   if (!data.hourly || !data.hourly.time) {
     throw new Error(`[${station.id}] Response không có trường hourly`);
@@ -422,7 +447,7 @@ async function fetchAllStations() {
     });
 
     if (i + CHUNK_SIZE < STATIONS.length) {
-      await delay(300); // Nghỉ 300ms giữa các cụm
+      await delay(1000); // Nghỉ 1 giây giữa các cụm để tránh Rate Limit
     }
   }
 
@@ -452,7 +477,7 @@ async function fetchAllDailyForecasts(days = 7) {
     });
 
     if (i + CHUNK_SIZE < STATIONS.length) {
-      await delay(300);
+      await delay(1000);
     }
   }
 
@@ -466,10 +491,10 @@ async function fetchStationRange(station, startDate, endDate) {
     `&longitude=${station.lon}` +
     `&hourly=${HOURLY_VARS}` +
     `&timezone=Asia%2FHo_Chi_Minh` +
-    `&start_date=${startDate}` + // Định dạng YYYY-MM-DD
+    `&start_date=${startDate}` +
     `&end_date=${endDate}`;
 
-  const data = await httpGet(url);
+  const data = await withRetry(() => httpGet(url), 5, 3000); // Backfill cần kiên nhẫn hơn
 
   if (!data.hourly || !data.hourly.time) {
     throw new Error(`[${station.id}] Response không có trường hourly`);

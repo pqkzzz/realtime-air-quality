@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { io } from "socket.io-client";
 import { useGemini } from "../hooks/useGemini";
 import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
@@ -932,8 +933,23 @@ const Dashboard = () => {
       }
     };
     fetchData();
+
+    // --- THIẾT LẬP REAL-TIME SOCKET ---
+    const socket = io("http://localhost:3000");
+
+    socket.on("connect", () => {
+      console.log("📡 Đã kết nối Real-time với Server (Socket ID:", socket.id, ")");
+    });
+
+    socket.on("data-updated", (msg) => {
+      console.log("⚡ [Real-time] Dữ liệu vừa được cập nhật trên Server:", msg);
+      // Khi server báo có data mới, chúng ta gọi lại hàm fetchData
+      fetchData();
+    });
+
     return () => {
       cancelled = true;
+      socket.disconnect(); // Ngắt kết nối khi đóng dashboard
     };
   }, []);
 
