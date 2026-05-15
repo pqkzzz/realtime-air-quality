@@ -167,10 +167,10 @@ const BubbleMap = ({
   const handleAnalyzeProvince = async (row, val) => {
     const provForecast = forecastData.find((f) => f.station_name === row.province);
     
-    // Lọc lấy 3 ngày dự báo tiếp theo (tính từ ngày mai)
+    // Lọc lấy 3 ngày dự báo tiếp theo (tính từ ngày mai, KHÔNG lấy ngày hiện tại)
     const todayStr = new Date().toISOString().split("T")[0];
     const next3Days = (provForecast?.forecasts || [])
-      .filter(f => f.date >= todayStr)
+      .filter(f => f.date > todayStr)
       .slice(0, 3);
 
     setSelectedProv({ name: row.province, aqi: val, forecast: next3Days });
