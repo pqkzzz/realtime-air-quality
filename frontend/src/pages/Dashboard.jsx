@@ -1396,10 +1396,10 @@ const Dashboard = () => {
           
           /* Box AI Insight */
           .insight-box { background: #2c5f8a; border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 20px; marginBottom: 30px; color: #ffffff; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-          .insight-box.negative { color: #ff4d4d !important; border-color: #ff4d4d; }
+          .insight-box.negative { color: #ffffff !important; border-color: #ff4d4d; }
           .insight-box pre { color: inherit !important; }
           .insight-title { color: #ffffff !important; display: flex; alignItems: center; gap: 8px; font-weight: 800; margin-bottom: 12px; }
-          .insight-box.negative .insight-title { color: #ff4d4d !important; }
+          .insight-box.negative .insight-title { color: #ffffff !important; }
         `}
       </style>
 
