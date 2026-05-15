@@ -1313,6 +1313,7 @@ const Dashboard = () => {
   useEffect(() => {
     setInsightT1("");
   }, [
+    overviewRows,
     selectedOverviewProvinces,
     selectedOverviewStartDate,
     selectedOverviewEndDate,
