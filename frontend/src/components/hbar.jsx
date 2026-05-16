@@ -17,7 +17,9 @@ const HorizontalBarChart = ({
   metricLabel = "AQI",
   topN = 8,
   order = "desc", // "desc" cho top cao nhất, "asc" cho top thấp nhất
-  barColor = "#3B82F6", // Cho phép truyền màu từ bên ngoài
+  barColor = "#3B82F6", // Fallback color
+  metricUnit = "",
+  metricThreshold = 100,
 }) => {
   const chartData = useMemo(() => {
     if (!rows.length) return [];
@@ -70,6 +72,32 @@ const HorizontalBarChart = ({
     );
   }
 
+  // Logic màu sắc AQI (giống BubbleMap)
+  const AQI_LEVELS = [
+    { fill: "#34D399" }, // Tốt (0-50)
+    { fill: "#FCD34D" }, // Trung bình (51-100)
+    { fill: "#FB923C" }, // Kém (101-150)
+    { fill: "#F87171" }, // Xấu (151-200)
+    { fill: "#C084FC" }, // Rất xấu (201-300)
+    { fill: "#FB7185" }, // Nguy hại (>300)
+  ];
+
+  const getLevel = (ratio) => {
+    if (ratio <= 0.5) return 0;
+    if (ratio <= 1.0) return 1;
+    if (ratio <= 1.5) return 2;
+    if (ratio <= 2.0) return 3;
+    if (ratio <= 3.0) return 4;
+    return 5;
+  };
+
+  const getBarColor = (value) => {
+    const ratio = value / (metricKey === "us_aqi" ? 100 : metricThreshold);
+    // Lưu ý: BubbleMap có logic: base = val / (metricKey === "us_aqi" ? 10 : 4) nhưng threshold của us_aqi mặc định là 100
+    // Ta dùng threshold chuẩn: val / threshold
+    return AQI_LEVELS[getLevel(value / metricThreshold)].fill;
+  };
+
   const barHeight = 28; // Thu nhỏ cột một chút để chứa 8 item thoải mái
   const chartHeight = Math.max(300, chartData.length * (barHeight + 16) + 70);
 
@@ -99,12 +127,12 @@ const HorizontalBarChart = ({
                 width: "8px",
                 height: "8px",
                 borderRadius: "50%",
-                backgroundColor: barColor,
+                backgroundColor: getBarColor(item.value),
                 display: "inline-block",
               }}
             />
             <span>
-              {metricLabel} trung bình: <strong>{item.value.toFixed(1)}</strong>
+              {metricLabel} trung bình: <strong>{item.value.toFixed(1)}</strong> {metricUnit}
             </span>
           </div>
         </div>
@@ -120,7 +148,7 @@ const HorizontalBarChart = ({
           layout="vertical"
           data={chartData}
           // Tăng margin phải (right) lên để có đủ chỗ hiển thị con số
-          margin={{ top: 10, right: 60, left: 10, bottom: 10 }}
+          margin={{ top: 10, right: 80, left: 10, bottom: 25 }}
           barCategoryGap="20%"
         >
           <CartesianGrid
@@ -134,9 +162,9 @@ const HorizontalBarChart = ({
             axisLine={{ stroke: "#CBD5E1" }}
             tickLine={{ stroke: "#CBD5E1" }}
             label={{
-              value: metricLabel,
-              position: "insideBottomRight",
-              offset: -5,
+              value: metricUnit ? `${metricLabel} (${metricUnit})` : metricLabel,
+              position: "insideBottom",
+              offset: -15,
               fill: "#64748B",
               fontSize: 13,
               fontWeight: 600,
@@ -161,8 +189,8 @@ const HorizontalBarChart = ({
             animationDuration={800}
             animationEasing="ease-out"
           >
-            {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={barColor} />
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={getBarColor(entry.value)} />
             ))}
 
             {/* Hiển thị con số ở cuối thanh */}
@@ -172,7 +200,7 @@ const HorizontalBarChart = ({
               fill="#0F172A"
               fontSize={13}
               fontWeight={700}
-              formatter={(val) => val.toFixed(1)}
+              formatter={(val) => metricUnit ? `${val.toFixed(1)} ${metricUnit}` : val.toFixed(1)}
             />
           </Bar>
         </BarChart>

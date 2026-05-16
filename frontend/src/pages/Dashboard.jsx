@@ -15,24 +15,43 @@ const MIN_DATE = "2026-04-01";
 const MAX_DATE = "2026-05-30"; // Mở rộng lịch đến hết tháng 5
 
 const OVERVIEW_METRICS = {
-  us_aqi: { label: "AQI", threshold: 100, decimals: 0 },
-  pm2_5: { label: "PM2.5", threshold: 15, decimals: 1 },
-  pm10: { label: "PM10", threshold: 45, decimals: 1 },
+  us_aqi: { label: "AQI", threshold: 100, decimals: 0, unit: "" },
+  pm2_5: { label: "PM2.5", threshold: 15, decimals: 1, unit: "µg/m³" },
+  pm10: { label: "PM10", threshold: 45, decimals: 1, unit: "µg/m³" },
 };
 
 const CORRELATION_Y_METRICS = {
-  us_aqi: { label: "AQI", decimals: 0 },
-  pm2_5: { label: "PM2.5", decimals: 1 },
-  pm10: { label: "PM10", decimals: 1 },
+  us_aqi: { label: "AQI", decimals: 0, unit: "" },
+  pm2_5: { label: "PM2.5", decimals: 1, unit: "µg/m³" },
+  pm10: { label: "PM10", decimals: 1, unit: "µg/m³" },
 };
 
 const CORRELATION_X_METRICS = {
-  pm2_5: { label: "PM2.5", threshold: 15, decimals: 1 },
-  pm10: { label: "PM10", threshold: 45, decimals: 1 },
-  carbon_monoxide: { label: "CO", threshold: 4000, decimals: 1 },
-  nitrogen_dioxide: { label: "NO2", threshold: 25, decimals: 1 },
-  sulphur_dioxide: { label: "SO2", threshold: 40, decimals: 1 },
-  ozone: { label: "O3", threshold: 100, decimals: 1 },
+  pm2_5: { label: "PM2.5", threshold: 15, decimals: 1, unit: "µg/m³" },
+  pm10: { label: "PM10", threshold: 45, decimals: 1, unit: "µg/m³" },
+  carbon_monoxide: { label: "CO", threshold: 4000, decimals: 1, unit: "µg/m³" },
+  nitrogen_dioxide: { label: "NO2", threshold: 25, decimals: 1, unit: "µg/m³" },
+  sulphur_dioxide: { label: "SO2", threshold: 40, decimals: 1, unit: "µg/m³" },
+  ozone: { label: "O3", threshold: 100, decimals: 1, unit: "µg/m³" },
+};
+
+const RADAR_METRICS = {
+  pm2_5: { label: "PM2.5", threshold: 15 },
+  pm10: { label: "PM10", threshold: 45 },
+  carbon_monoxide: { label: "CO", threshold: 4000 },
+  nitrogen_dioxide: { label: "NO2", threshold: 25 },
+  sulphur_dioxide: { label: "SO2", threshold: 40 },
+  ozone: { label: "O3", threshold: 100 },
+};
+
+const SCATTER_METRICS = {
+  us_aqi: { label: "AQI", unit: "" },
+  pm2_5: { label: "PM2.5", unit: "µg/m³" },
+  pm10: { label: "PM10", unit: "µg/m³" },
+  carbon_monoxide: { label: "CO", unit: "µg/m³" },
+  nitrogen_dioxide: { label: "NO2", unit: "µg/m³" },
+  sulphur_dioxide: { label: "SO2", unit: "µg/m³" },
+  ozone: { label: "O3", unit: "µg/m³" },
 };
 
 // --- CÁC HÀM XỬ LÝ DATA (Toán học & Thống kê) ---
@@ -262,13 +281,13 @@ const KpiCard = ({
   const [isHovered, setIsHovered] = useState(false);
   // Các thẻ có ý nghĩa tiêu cực/cảnh báo cần để chữ đỏ
   const isWarningCard = [
-    "CAO NHẤT",
+    "AQI CAO NHẤT",
     "SỐ TỈNH BÁO ĐỘNG",
     "VƯỢT NGƯỠNG WHO",
     "GIỜ RỦI RO",
     "NGÀY VƯỢT"
   ].includes(label.toUpperCase());
-                     
+
   const isDark = bgColor !== "#ffffff";
   const actualBgColor = isDark ? bgColor : "#ffffff";
 
@@ -519,7 +538,7 @@ const OverviewKpiGrid = ({ overviewStats, currentOverviewMetricDecimals }) => {
         }
       />
       <KpiCard
-        label="CAO NHẤT"
+        label="AQI CAO NHẤT"
         value={
           overviewStats.max == null
             ? "--"
@@ -551,7 +570,8 @@ const OverviewKpiGrid = ({ overviewStats, currentOverviewMetricDecimals }) => {
         }
         unit="/ 34"
         accent="#3B82F6"
-        status="Cảnh báo"
+        description="AQI ≥ 100"
+
         statusColor="rgba(239, 68, 68, 1)"
         icon={
           <svg
@@ -600,12 +620,12 @@ const TrendKpiGrid = ({ trendStats }) => (
   <div
     style={{
       display: "grid",
-      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+      gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
       gap: "16px",
       marginBottom: "24px",
     }}
   >
-    <div style={{ gridColumn: "span 2" }}>
+    <div style={{ gridColumn: "span 3" }}>
       <KpiCard
         isHero
         label="TRUNG BÌNH KỲ"
@@ -641,7 +661,7 @@ const TrendKpiGrid = ({ trendStats }) => (
         }
       />
     </div>
-    <div style={{ gridColumn: "span 2" }}>
+    <div style={{ gridColumn: "span 3" }}>
       <KpiCard
         isHero
         label="MỨC ĐỘ BIẾN ĐỘNG"
@@ -663,91 +683,76 @@ const TrendKpiGrid = ({ trendStats }) => (
         }
       />
     </div>
-    <KpiCard
-      label="NGÀY VƯỢT"
-      value={trendStats.exceedDays ?? "--"}
-      unit="ngày"
-      accent="#3B82F6"
-      status={trendStats.exceedDays > 0 ? "Vượt ngưỡng" : "An toàn"}
-      statusColor={trendStats.exceedDays > 0 ? "rgba(239, 68, 68, 1)" : "#10B981"}
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-          <line x1="16" y1="2" x2="16" y2="6" />
-          <line x1="8" y1="2" x2="8" y2="6" />
-          <line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-      }
-    />
-    <KpiCard
-      label="CAO / THẤP"
-      value={`${formatNumber(trendStats.max, 0)}`}
-      unit={`/ ${formatNumber(trendStats.min, 0)}`}
-      accent="#3B82F6"
-      description="Max / Min"
-      valueColor="#0F172A"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="7 15 12 20 17 15" />
-          <polyline points="7 9 12 4 17 9" />
-        </svg>
-      }
-    />
-    <KpiCard
-      label="DỰ BÁO ĐỈNH"
-      value={formatNumber(trendStats.forecastPeak, 0)}
-      accent="#3B82F6"
-      status="Tuyến tính"
-      statusColor="#D97706"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <circle cx="12" cy="12" r="6" />
-          <circle cx="12" cy="12" r="2" />
-        </svg>
-      }
-    />
-    <KpiCard
-      label="GIỜ RỦI RO"
-      value={trendStats.riskHours ?? "--"}
-      unit="giờ"
-      accent="#3B82F6"
-      description="AQI ≥ 100"
-      icon={
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      }
-    />
+    <div style={{ gridColumn: "span 2" }}>
+      <KpiCard
+        label="NGÀY VƯỢT"
+        value={trendStats.exceedDays ?? "--"}
+        unit="ngày"
+        accent="#3B82F6"
+        status={trendStats.exceedDays > 0 ? "Vượt ngưỡng" : "An toàn"}
+        statusColor={trendStats.exceedDays > 0 ? "rgba(239, 68, 68, 1)" : "#10B981"}
+        icon={
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        }
+      />
+    </div>
+    <div style={{ gridColumn: "span 2" }}>
+      <KpiCard
+        label="CAO / THẤP"
+        value={`${formatNumber(trendStats.max, 0)}`}
+        unit={`/ ${formatNumber(trendStats.min, 0)}`}
+        accent="#3B82F6"
+        description="Max / Min"
+        valueColor="#0F172A"
+        icon={
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="7 15 12 20 17 15" />
+            <polyline points="7 9 12 4 17 9" />
+          </svg>
+        }
+      />
+    </div>
+    <div style={{ gridColumn: "span 2" }}>
+      <KpiCard
+        label="GIỜ RỦI RO"
+        value={trendStats.riskHours ?? "--"}
+        unit="giờ"
+        accent="#3B82F6"
+        description="AQI ≥ 100"
+        icon={
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        }
+      />
+    </div>
   </div>
 );
 
@@ -865,7 +870,7 @@ const Dashboard = () => {
     getSavedState("selectedCorrelationY", "us_aqi"),
   );
   const [selectedCorrelationX, setSelectedCorrelationX] = useState(() =>
-    getSavedState("selectedCorrelationX", "carbon_monoxide"),
+    getSavedState("selectedCorrelationX", "pm2_5"),
   );
   const [selectedCorrelationProvince, setSelectedCorrelationProvince] =
     useState(() => getSavedState("selectedCorrelationProvince", ""));
@@ -1237,13 +1242,27 @@ const Dashboard = () => {
   const correlationStats = useMemo(() => {
     if (!correlationRows.length)
       return { pearson: null, dominantComponent: null };
+      
     const yV = correlationRows.map((row) => row[selectedCorrelationY]);
     const xV = correlationRows.map((row) => row[selectedCorrelationX]);
+    
+    // Tính thành phần chủ đạo dựa trên % vượt ngưỡng an toàn (giống RadarChart)
+    let maxPct = -1;
+    let dominantLabel = "--";
+    
+    Object.entries(RADAR_METRICS).forEach(([key, config]) => {
+      const values = correlationRows.map((r) => r[key]).filter(Number.isFinite);
+      const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+      const pct = avg / config.threshold;
+      if (pct > maxPct) {
+        maxPct = pct;
+        dominantLabel = config.label;
+      }
+    });
+
     return {
       pearson: calculatePearson(xV, yV),
-      dominantComponent:
-        CORRELATION_X_METRICS[selectedCorrelationX]?.label ??
-        selectedCorrelationX,
+      dominantComponent: dominantLabel,
     };
   }, [correlationRows, selectedCorrelationX, selectedCorrelationY]);
 
@@ -1251,6 +1270,27 @@ const Dashboard = () => {
     OVERVIEW_METRICS[selectedOverviewMetric]?.label ?? "AQI";
   const currentOverviewMetricDecimals =
     OVERVIEW_METRICS[selectedOverviewMetric]?.decimals ?? 0;
+  const currentOverviewMetricUnit =
+    OVERVIEW_METRICS[selectedOverviewMetric]?.unit ?? "";
+
+  const currentCorrelationYUnit = SCATTER_METRICS[selectedCorrelationY]?.unit ?? "";
+  const currentCorrelationXUnit = SCATTER_METRICS[selectedCorrelationX]?.unit ?? "";
+
+  const lastUpdatedTime = useMemo(() => {
+    if (!data.length) return null;
+    const validDates = data
+      .map((d) => (d.datetime ? new Date(d.datetime) : null))
+      .filter((d) => d && !isNaN(d.getTime()));
+    if (!validDates.length) return null;
+    const maxDate = new Date(Math.max(...validDates));
+    return maxDate.toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }, [data]);
 
   const IconOverview = () => (
     <svg
@@ -1360,8 +1400,8 @@ const Dashboard = () => {
       setInsightT2(result);
     } else if (tab === "correlation") {
       const payloadT3 = {
-        bien_Y: CORRELATION_Y_METRICS[selectedCorrelationY]?.label,
-        bien_X: CORRELATION_X_METRICS[selectedCorrelationX]?.label,
+        bien_Y: SCATTER_METRICS[selectedCorrelationY]?.label,
+        bien_X: SCATTER_METRICS[selectedCorrelationX]?.label,
         he_so_Pearson: correlationStats.pearson?.toFixed(2),
         thanh_phan_chu_dao: correlationStats.dominantComponent,
       };
@@ -1431,8 +1471,8 @@ const Dashboard = () => {
             </span>
             {[
               { max: 50, lbl: "Tốt", c: "#00C853" },
-              { max: 100, lbl: "Vừa", c: "#FFD600" },
-              { max: 150, lbl: "Nhạy cảm", c: "#FF6D00" },
+              { max: 100, lbl: "Trung bình", c: "#FFD600" },
+              { max: 150, lbl: "Kém", c: "#FF6D00" },
               { max: 200, lbl: "Xấu", c: "#D50000" },
             ].map(({ lbl, c }) => (
               <span
@@ -1459,6 +1499,34 @@ const Dashboard = () => {
               </span>
             ))}
           </div>
+          {lastUpdatedTime && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 12px",
+                background: "rgba(16, 185, 129, 0.15)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                borderRadius: "20px",
+                color: "#10B981",
+                fontSize: "12px",
+                fontWeight: "700",
+                letterSpacing: "0.03em",
+              }}
+            >
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  backgroundColor: "#10B981",
+                  borderRadius: "50%",
+                  boxShadow: "0 0 6px #10B981",
+                }}
+              ></span>
+              Dữ liệu mới nhất: {lastUpdatedTime}
+            </div>
+          )}
           <button
             className="topbar-pill-btn"
             onClick={() => window.location.reload()}
@@ -1567,22 +1635,26 @@ const Dashboard = () => {
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Top 5 Ô nhiễm nhất</h3>
+                    <h3 style={styles.chartTitle}>Top 5 Tỉnh/Thành ô nhiễm</h3>
                     <HorizontalBarChart
                       rows={overviewRows}
                       metricKey={selectedOverviewMetric}
                       metricLabel={currentOverviewMetricLabel}
+                      metricUnit={currentOverviewMetricUnit}
+                      metricThreshold={overviewMetricThreshold}
                       topN={5}
                       order="desc"
                       barColor="#EF4444"
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Top 5 Trong lành nhất</h3>
+                    <h3 style={styles.chartTitle}>Top 5 Tỉnh/Thành trong lành</h3>
                     <HorizontalBarChart
                       rows={overviewRows}
                       metricKey={selectedOverviewMetric}
                       metricLabel={currentOverviewMetricLabel}
+                      metricUnit={currentOverviewMetricUnit}
+                      metricThreshold={overviewMetricThreshold}
                       topN={5}
                       order="asc"
                       barColor="#10B981"
@@ -1884,8 +1956,11 @@ const Dashboard = () => {
                             fontSize: "12px",
                           }}
                         >
-                          <option value="us_aqi">Y: AQI</option>
-                          <option value="pm2_5">Y: PM2.5</option>
+                          {Object.entries(SCATTER_METRICS).map(([key, meta]) => (
+                            <option key={key} value={key}>
+                              Y: {meta.label}
+                            </option>
+                          ))}
                         </select>
                         <select
                           className="hover-input"
@@ -1899,9 +1974,11 @@ const Dashboard = () => {
                             fontSize: "12px",
                           }}
                         >
-                          <option value="carbon_monoxide">X: CO</option>
-                          <option value="nitrogen_dioxide">X: NO2</option>
-                          <option value="ozone">X: O3</option>
+                          {Object.entries(SCATTER_METRICS).map(([key, meta]) => (
+                            <option key={key} value={key}>
+                              X: {meta.label}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -1909,24 +1986,21 @@ const Dashboard = () => {
                       rows={correlationRows}
                       xKey={selectedCorrelationX}
                       xLabel={
-                        CORRELATION_X_METRICS[selectedCorrelationX]?.label
+                        SCATTER_METRICS[selectedCorrelationX]?.label
                       }
+                      xUnit={currentCorrelationXUnit}
                       yKey={selectedCorrelationY}
                       yLabel={
-                        CORRELATION_Y_METRICS[selectedCorrelationY]?.label
+                        SCATTER_METRICS[selectedCorrelationY]?.label
                       }
+                      yUnit={currentCorrelationYUnit}
                     />
                   </div>
                   <div className="hover-card" style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>Cấu trúc khí thải (Radar)</h3>
+                    <h3 style={styles.chartTitle}>Cấu trúc khí thải</h3>
                     <RadarChart
                       rows={correlationRows}
-                      selectedY={selectedCorrelationY}
-                      yLabel={
-                        CORRELATION_Y_METRICS[selectedCorrelationY]?.label
-                      }
-                      yThreshold={100}
-                      allXMetrics={CORRELATION_X_METRICS}
+                      metrics={RADAR_METRICS}
                       areaLabel={selectedCorrelationProvince || "Toàn quốc"}
                     />
                   </div>

@@ -50,8 +50,10 @@ const ScatterPlot = ({
   rows = [],
   xKey = "pm2_5",
   xLabel = "PM2.5",
+  xUnit = "",
   yKey = "us_aqi",
   yLabel = "AQI",
+  yUnit = "",
   maxPoints = 600,
 }) => {
   const { scatterData, regressionLine } = useMemo(() => {
@@ -169,10 +171,10 @@ const ScatterPlot = ({
           )}
           <div style={{ marginTop: "6px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "6px" }}>
             <div style={{ marginBottom: "3px" }}>
-              {xLabel}: <span style={{ color: "#93C5FD", fontWeight: 600 }}>{pt.x?.toFixed(2)}</span>
+              {xLabel}: <span style={{ color: "#93C5FD", fontWeight: 600 }}>{pt.x?.toFixed(2)}</span> {xUnit}
             </div>
             <div>
-              {yLabel}: <strong>{pt.y?.toFixed(1)}</strong>
+              {yLabel}: <strong>{pt.y?.toFixed(1)}</strong> {yUnit}
             </div>
           </div>
         </div>
@@ -196,7 +198,7 @@ const ScatterPlot = ({
             axisLine={{ stroke: "#CBD5E1" }}
             tickLine={{ stroke: "#CBD5E1" }}
             label={{
-              value: xLabel,
+              value: xUnit ? `${xLabel} (${xUnit})` : xLabel,
               position: "insideBottom",
               offset: -15,
               fill: "#64748B",
@@ -213,7 +215,7 @@ const ScatterPlot = ({
             axisLine={{ stroke: "#CBD5E1" }}
             tickLine={{ stroke: "#CBD5E1" }}
             label={{
-              value: yLabel,
+              value: yUnit ? `${yLabel} (${yUnit})` : yLabel,
               angle: -90,
               position: "insideLeft",
               offset: 10,
