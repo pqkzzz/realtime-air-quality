@@ -11,7 +11,10 @@ const cron = require("node-cron");
 const {
   fetchAllStations,
   fetchAllDailyForecasts,
+  fetchStationRange,
+  STATIONS,
 } = require("../services/openMeteoService");
+const db = require("../configs/db");
 const {
   insertReadings,
   upsertForecasts,
@@ -143,6 +146,76 @@ async function runCleanupJob() {
 }
 
 // ─────────────────────────────────────────────
+// Tự động vá lỗ hổng dữ liệu (Auto-Backfill) khi khởi động server
+// ─────────────────────────────────────────────
+async function checkAndBackfillGap() {
+  try {
+    console.log("[AQI Auto-Backfill] 🔍 Đang kiểm tra khoảng trống dữ liệu trong database...");
+    const latestRecord = await db("air_quality_readings")
+      .max("measured_at as max_date")
+      .first();
+
+    if (!latestRecord || !latestRecord.max_date) {
+      console.log("[AQI Auto-Backfill] ℹ️ Cơ sở dữ liệu trống hoặc chưa có dữ liệu quan trắc.");
+      return;
+    }
+
+    const lastDate = new Date(latestRecord.max_date);
+    const now = new Date();
+    
+    // Tính khoảng cách ngày
+    const diffMs = now.getTime() - lastDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    // Nếu tắt server hơn 2 ngày (để bù khoảng past_days=2 mặc định)
+    if (diffDays >= 2.0) {
+      const startDateStr = lastDate.toISOString().split("T")[0];
+      const endDateStr = now.toISOString().split("T")[0];
+
+      console.log(`[AQI Auto-Backfill] 🚨 Phát hiện khoảng trống dữ liệu (${diffDays.toFixed(1)} ngày).`);
+      console.log(`[AQI Auto-Backfill] ⏳ Tiến hành tự động vá dữ liệu từ ngày ${startDateStr} đến ${endDateStr}...`);
+
+      const CHUNK_SIZE = 3; // Lấy song song theo cụm nhỏ để tránh rate limit
+      let gapInserted = 0;
+      for (let i = 0; i < STATIONS.length; i += CHUNK_SIZE) {
+        const chunk = STATIONS.slice(i, i + CHUNK_SIZE);
+        await Promise.allSettled(chunk.map(async (station) => {
+          try {
+            const readings = await fetchStationRange(station, startDateStr, endDateStr);
+            if (readings && readings.length > 0) {
+              const toInsert = readings.filter(r => new Date(r.measured_at) <= now);
+              const count = await db("air_quality_readings")
+                .insert(toInsert)
+                .onConflict(["station_id", "measured_at"])
+                .ignore();
+              gapInserted += count.rowCount ?? count.length ?? 0;
+            }
+          } catch (err) {
+            console.error(`[AQI Auto-Backfill] ❌ Lỗi trạm ${station.name}:`, err.message);
+          }
+        }));
+        if (i + CHUNK_SIZE < STATIONS.length) {
+          await new Promise(resolve => setTimeout(resolve, 1500)); // Nghỉ 1.5s giữa các trạm
+        }
+      }
+      console.log(`[AQI Auto-Backfill] 🎉 Đã tự động vá xong ${gapInserted} bản ghi chất lượng không khí khuyết.`);
+      
+      if (socketIo) {
+        console.log("[AQI Auto-Backfill] 📡 Gửi thông báo cập nhật dữ liệu tới client...");
+        socketIo.emit("data-updated", {
+          type: "READINGS_BACKFILLED",
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } else {
+      console.log(`[AQI Auto-Backfill] ✅ Dữ liệu liên tục (khoảng cách chỉ ${diffDays.toFixed(2)} ngày). Không cần vá.`);
+    }
+  } catch (err) {
+    console.error("[AQI Auto-Backfill] ❌ Lỗi trong quá trình tự động vá:", err.message);
+  }
+}
+
+// ─────────────────────────────────────────────
 // Đăng ký cron schedules
 // ─────────────────────────────────────────────
 function startCronJobs(io) {
@@ -155,8 +228,9 @@ function startCronJobs(io) {
   console.log("[AQI Cron] ✅ Đã đăng ký lịch trình.");
 
   // 2. Chạy ngay sau khi khởi động một chút để không làm chậm server lúc init
-  setTimeout(() => {
+  setTimeout(async () => {
     console.log("[AQI Cron] 🚀 Đang chạy fetch ban đầu trong background...");
+    await checkAndBackfillGap();
     runFetchJob();
     runForecastJob();
   }, 5000); // Đợi 5 giây sau khi server start mới bắt đầu fetch

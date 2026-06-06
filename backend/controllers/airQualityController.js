@@ -45,8 +45,8 @@ function parseTimeRange(query) {
 exports.getAllData = async (req, res) => {
   try {
     const knex = require("../configs/db");
-    const days = parseInt(req.query.days) || 30;
-    
+    const days = parseInt(req.query.days) || 60;
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
