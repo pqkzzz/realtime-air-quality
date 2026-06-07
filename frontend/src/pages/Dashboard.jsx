@@ -847,12 +847,6 @@ const Dashboard = () => {
   const [selectedOverviewMetric, setSelectedOverviewMetric] = useState(() =>
     getSavedState("selectedOverviewMetric", "us_aqi"),
   );
-  const [selectedOverviewStartDate, setSelectedOverviewStartDate] = useState(
-    () => getSavedState("selectedOverviewStartDate", "2026-04-01"),
-  );
-  const [selectedOverviewEndDate, setSelectedOverviewEndDate] = useState(() =>
-    getSavedState("selectedOverviewEndDate", "2026-04-30"),
-  );
 
   const [selectedTrendProvince, setSelectedTrendProvince] = useState(() =>
     getSavedState("selectedTrendProvince", ""),
@@ -925,8 +919,6 @@ const Dashboard = () => {
           const earliest = dates[0];
           const latest = dates[dates.length - 1];
 
-          setSelectedOverviewStartDate(latest);
-          setSelectedOverviewEndDate(latest);
           setSelectedTrendDate(latest);
           setSelectedCorrelationStartDate(earliest);
           setSelectedCorrelationEndDate(latest);
@@ -1095,22 +1087,38 @@ const Dashboard = () => {
     [selectedOverviewMetric],
   );
 
+  const latestOverviewSlot = useMemo(() => {
+    if (!data.length) return null;
+
+    return data.reduce((latest, row) => {
+      if (!row.dateKey || !Number.isFinite(row.hour)) return latest;
+      const slotKey = `${row.dateKey} ${String(row.hour).padStart(2, "0")}`;
+      if (!latest || slotKey > latest.slotKey) {
+        return {
+          dateKey: row.dateKey,
+          hour: row.hour,
+          slotKey,
+        };
+      }
+      return latest;
+    }, null);
+  }, [data]);
+
   const overviewRows = useMemo(() => {
-    if (!data.length) return [];
+    if (!data.length || !latestOverviewSlot) return [];
     const selectedSet = new Set(selectedOverviewProvinces);
     const useAllProvinces = selectedSet.size === 0;
     return data.filter((row) => {
       const pMatch = useAllProvinces || selectedSet.has(row.province);
-      const dMatch =
-        row.dateKey >= selectedOverviewStartDate &&
-        row.dateKey <= selectedOverviewEndDate;
-      return pMatch && dMatch;
+      const latestHourMatch =
+        row.dateKey === latestOverviewSlot.dateKey &&
+        row.hour === latestOverviewSlot.hour;
+      return pMatch && latestHourMatch;
     });
   }, [
     data,
+    latestOverviewSlot,
     selectedOverviewProvinces,
-    selectedOverviewStartDate,
-    selectedOverviewEndDate,
   ]);
 
   const overviewStats = useMemo(() => {
@@ -1355,8 +1363,7 @@ const Dashboard = () => {
   }, [
     overviewRows,
     selectedOverviewProvinces,
-    selectedOverviewStartDate,
-    selectedOverviewEndDate,
+    latestOverviewSlot,
     selectedOverviewMetric,
   ]);
 
@@ -1377,6 +1384,9 @@ const Dashboard = () => {
         .sort((a, b) => b.avg_aqi - a.avg_aqi);
 
       const payloadT1 = {
+        thoi_diem_du_lieu: latestOverviewSlot
+          ? `${latestOverviewSlot.dateKey} ${String(latestOverviewSlot.hour).padStart(2, "0")}:00`
+          : "latest hour",
         trung_binh_chung: overviewStats.average?.toFixed(1) || "0",
         so_tinh_vuot_nguong: overviewStats.warningProvinces || 0,
         top_3_o_nhiem: aggregatedList.slice(0, 3).map((r) => r.province),
