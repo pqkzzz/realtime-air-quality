@@ -5,8 +5,24 @@ const app = express();
 const router = require("./routers/index");
 
 const PORT = process.env.PORT || 3000;
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const devOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const corsOrigins = [...new Set([...allowedOrigins, ...devOrigins])];
 
-app.use(cors());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked origin: ${origin}`));
+    },
+  }),
+);
 app.use(express.json());
 app.use("/api", router);
 
@@ -20,7 +36,7 @@ const { Server } = require("socket.io");
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Cho phép tất cả các nguồn (cần thiết cho dev)
+    origin: corsOrigins,
   },
 });
 

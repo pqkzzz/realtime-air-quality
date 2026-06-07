@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 // Địa chỉ của Backend API (Cổng 3000 đã cấu hình trong Backend)
-export const API_URL = 'http://localhost:3000/api';
+export const API_URL = API_BASE_URL;
 
 // Tạo một instance axios chung để sử dụng trong toàn bộ project
 const api = axios.create({

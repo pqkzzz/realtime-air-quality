@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { useGemini } from "../hooks/useGemini";
+import { apiUrl, SOCKET_URL } from "../config/api";
 import ProvinceSelector from "./ProvinceSelector";
 import TimeSeriesLineChart from "../components/TimeSeriesLineChart";
 import RadarChart from "../components/RadarChart";
@@ -879,7 +880,7 @@ const Dashboard = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/air-quality/all");
+        const response = await fetch(apiUrl("/air-quality/all"));
         if (!response.ok) throw new Error("API chưa sẵn sàng hoặc lỗi server");
 
         const result = await response.json();
@@ -926,13 +927,13 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Lỗi fetch API:", error);
         if (!cancelled)
-          setLoadError("Không thể kết nối đến server dữ liệu (localhost:3000)");
+          setLoadError("Không thể kết nối đến server dữ liệu");
       }
     };
     fetchData();
 
     // --- THIẾT LẬP REAL-TIME SOCKET ---
-    const socket = io("http://localhost:3000");
+    const socket = io(SOCKET_URL);
 
     socket.on("connect", () => {
       console.log("📡 Đã kết nối Real-time với Server (Socket ID:", socket.id, ")");

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useGemini } from "../hooks/useGemini";
+import { apiUrl } from "../config/api";
 
 import {
   MapContainer,
@@ -154,7 +155,7 @@ const BubbleMap = ({
   const [forecastData, setForecastData] = useState([]);
 
   useEffect(() => {
-    fetch("/api/air-quality/forecast")
+    fetch(apiUrl("/air-quality/forecast"))
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
