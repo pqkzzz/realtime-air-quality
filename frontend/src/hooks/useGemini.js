@@ -2,8 +2,7 @@ import { useState } from 'react';
 
 
 const API_KEY =
-  import.meta.env.VITE_GEMINI_API_KEY ||
-  "AIzaSyBhBa5QiZj3qpineBOW0P7V35Z4WvDe7NQ";
+  import.meta.env.VITE_GEMINI_API_KEY || "";
 
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${API_KEY}`;
 
@@ -23,6 +22,10 @@ export const useGemini = () => {
   const [loadingAI, setLoadingAI] = useState(false);
 
   const generateInsight = async (dataPayload) => {
+    if (!API_KEY) {
+      return `- Lỗi kết nối máy chủ AI.\n- Lý do: Chưa cấu hình VITE_GEMINI_API_KEY.\n- Vui lòng thêm Gemini API key trong Environment Variables của Vercel rồi redeploy.`;
+    }
+
     setLoadingAI(true);
     try {
       const response = await fetch(GEMINI_URL, {
