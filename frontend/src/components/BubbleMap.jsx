@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useGemini } from "../hooks/useGemini";
+import { apiUrl } from "../config/api";
 
 import {
   MapContainer,
@@ -151,10 +152,30 @@ const BubbleMap = ({
   const { generateInsight, loadingAI } = useGemini();
   const [localInsight, setLocalInsight] = useState("");
   const [selectedProv, setSelectedProv] = useState(null);
+  const [forecastData, setForecastData] = useState([]);
+
+  useEffect(() => {
+    fetch(apiUrl("/air-quality/forecast"))
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setForecastData(data.data);
+        }
+      })
+      .catch((err) => console.error("Lỗi fetch forecast:", err));
+  }, []);
 
   const handleAnalyzeProvince = async (row, val) => {
-    setSelectedProv({ name: row.province, aqi: val });
-    setLocalInsight(""); 
+    const provForecast = forecastData.find((f) => f.station_name === row.province);
+    
+    // Lọc lấy 3 ngày dự báo tiếp theo (tính từ ngày mai, KHÔNG lấy ngày hiện tại)
+    const todayStr = new Date().toISOString().split("T")[0];
+    const next3Days = (provForecast?.forecasts || [])
+      .filter(f => f.date > todayStr)
+      .slice(0, 3);
+
+    setSelectedProv({ name: row.province, aqi: val, forecast: next3Days });
+    setLocalInsight("");
 
     const customPrompt = `Bạn là chuyên gia môi trường bản địa. Hãy phân tích số liệu AQI là ${val.toFixed(1)} tại tỉnh ${row.province}. 
     Yêu cầu: KHÔNG nhận xét máy móc theo khoảng số. HÃY dùng tri thức địa lý, đặc thù công nghiệp/giao thông/khí hậu của ${row.province} để giải thích. 
@@ -387,8 +408,39 @@ const BubbleMap = ({
                 <span style={{ fontSize: 12, color: "#64748B", fontStyle: "italic" }}>AI đang phân tích...</span>
               </div>
             ) : (
-              <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-line" }}>
-                {localInsight}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                  {localInsight}
+                </div>
+                {selectedProv.forecast && selectedProv.forecast.length > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 12, borderTop: "1px dashed #CBD5E1" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", marginBottom: 8 }}>
+                      📅 Dự báo 3 ngày tới:
+                    </div>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+                      {selectedProv.forecast.map((f, i) => {
+                        // Tính toán màu tương ứng với AQI
+                        let color = "#34D399";
+                        if (f.aqi > 50) color = "#FCD34D";
+                        if (f.aqi > 100) color = "#FB923C";
+                        if (f.aqi > 150) color = "#F87171";
+                        if (f.aqi > 200) color = "#C084FC";
+                        if (f.aqi > 300) color = "#FB7185";
+                        
+                        const dateObj = new Date(f.date);
+                        const dayStr = `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+
+                        return (
+                          <div key={i} style={{ flex: 1, background: "rgba(0,0,0,0.02)", borderRadius: 8, padding: "8px 4px", textAlign: "center", border: "1px solid #E2E8F0" }}>
+                            <div style={{ fontSize: 11, color: "#64748B", fontWeight: 600 }}>{dayStr}</div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: color, margin: "4px 0" }}>{f.aqi}</div>
+                            <div style={{ fontSize: 9, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>{f.category}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

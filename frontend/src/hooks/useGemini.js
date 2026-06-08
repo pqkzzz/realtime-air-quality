@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
 
-const API_KEY = "AIzaSyBhBa5QiZj3qpineBOW0P7V35Z4WvDe7NQ"; 
+const API_KEY =
+  import.meta.env.VITE_GEMINI_API_KEY ||
+  "AIzaSyBhBa5QiZj3qpineBOW0P7V35Z4WvDe7NQ";
 
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${API_KEY}`;
 

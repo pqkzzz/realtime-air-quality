@@ -10,7 +10,7 @@ const db = require("../configs/db");
 async function runBackfill() {
   // Khoảng thời gian bạn yêu cầu
   const startDate = "2026-04-01";
-  const endDate = "2026-05-13";
+  const endDate = "2026-05-14";
 
   console.log(`🚀 Bắt đầu quá trình Backfill dữ liệu từ ${startDate} đến ${endDate}...`);
   console.log(`📊 Tổng cộng có ${STATIONS.length} trạm đo cần xử lý.`);
@@ -20,13 +20,13 @@ async function runBackfill() {
   for (const station of STATIONS) {
     try {
       console.log(`\n📡 Đang gọi API cho trạm: ${station.name} (${station.id})...`);
-      
+
       // Gọi hàm fetchRange từ service
       const readings = await fetchStationRange(station, startDate, endDate);
-      
+
       if (readings && readings.length > 0) {
         console.log(`📥 Đã tải ${readings.length} bản ghi. Đang lưu vào database...`);
-        
+
         // Thực hiện insert vào bảng air_quality_readings
         // Knex batchInsert không hỗ trợ .onConflict(), nên ta tự chia nhỏ (chunk) và dùng .insert()
         const chunkSize = 500;
@@ -56,7 +56,7 @@ async function runBackfill() {
   console.log(`🏁 HOÀN THÀNH BACKFILL!`);
   console.log(`📦 Tổng số bản ghi đã xử lý: ${totalInserted}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  
+
   // Đóng kết nối DB
   await db.destroy();
   process.exit(0);

@@ -45,8 +45,14 @@ function parseTimeRange(query) {
 exports.getAllData = async (req, res) => {
   try {
     const knex = require("../configs/db");
+    const days = parseInt(req.query.days) || 60;
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
     const fullData = await knex("air_quality_readings")
       .select("*")
+      .where("measured_at", ">=", cutoffDate)
       .orderBy("measured_at", "asc");
 
     const formatted = fullData.map((row) => {
